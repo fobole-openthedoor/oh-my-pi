@@ -1,7 +1,6 @@
 modelRoles:
   default: beefsms/happy/kimi-k3
-  slow: beefsms/happy/glm-5.3
-  smol: beefsms/happy/qwen-3.8-fast
+  smol: beefsms/deepseek-flash
   plan: beefsms/happy/kimi-k3
   commit: beefsms/happy/qwen-3.8-fast
   vision: beefsms/deepseek-flash:low

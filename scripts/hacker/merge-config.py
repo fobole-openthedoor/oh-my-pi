@@ -30,10 +30,14 @@ KIT_OWNED = {
         "repeatGap": 2,
     },
     "modelRoles": {
+        "smol": "beefsms/deepseek-flash",
         "vision": "beefsms/deepseek-flash:low",
     },
     "modelProviderOrder": ["beefsms"],
 }
+
+# Roles the kit must not preset. Dropped on merge even if the user file has them.
+KIT_DROP_ROLES = ("slow",)
 
 
 def deep_merge_owned(user: dict, owned: dict) -> dict:
@@ -47,6 +51,24 @@ def deep_merge_owned(user: dict, owned: dict) -> dict:
         else:
             out[key] = value
     return out
+
+
+def drop_kit_roles(data: dict) -> dict:
+    roles = data.get("modelRoles")
+    if not isinstance(roles, dict):
+        return data
+    next_roles = dict(roles)
+    for role in KIT_DROP_ROLES:
+        next_roles.pop(role, None)
+    if next_roles == roles:
+        return data
+    out = dict(data)
+    out["modelRoles"] = next_roles
+    return out
+
+
+def apply_kit_policy(user: dict) -> dict:
+    return drop_kit_roles(deep_merge_owned(user, KIT_OWNED))
 
 
 def load_yaml(path: Path) -> dict:
@@ -78,7 +100,7 @@ def merge_file(path: Path, example: Path | None) -> str:
             path.write_text("{}\n", encoding="utf-8")
             os.chmod(path, 0o600)
     user = load_yaml(path)
-    merged = deep_merge_owned(user, KIT_OWNED)
+    merged = apply_kit_policy(user)
     if merged == user:
         return "unchanged"
     text = dump_yaml(merged)
@@ -103,7 +125,7 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yml"
         path.write_text(
-            "modelRoles:\n  default: keep-me\ncompaction:\n  enabled: false\n  idleTimeoutSeconds: 60\n",
+            "modelRoles:\n  default: keep-me\n  slow: beefsms/happy/glm-5.3\ncompaction:\n  enabled: false\n  idleTimeoutSeconds: 60\n",
             encoding="utf-8",
         )
         status = merge_file(path, None)
@@ -116,6 +138,12 @@ def self_test() -> int:
             return 1
         if data.get("modelRoles", {}).get("vision") != "beefsms/deepseek-flash:low":
             print("FAIL modelRoles.vision not beefsms/deepseek-flash:low", file=sys.stderr)
+            return 1
+        if data.get("modelRoles", {}).get("smol") != "beefsms/deepseek-flash":
+            print("FAIL modelRoles.smol not beefsms/deepseek-flash", file=sys.stderr)
+            return 1
+        if "slow" in (data.get("modelRoles") or {}):
+            print("FAIL modelRoles.slow was preset", file=sys.stderr)
             return 1
         if data.get("modelProviderOrder") != ["beefsms"]:
             print(f"FAIL modelProviderOrder {data.get('modelProviderOrder')}", file=sys.stderr)

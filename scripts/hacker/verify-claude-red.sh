@@ -97,6 +97,18 @@ else
   bad "config.yml vision role is not beefsms/deepseek-flash:low"
 fi
 
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq "smol:[[:space:]]*['\"]?beefsms/deepseek-flash(['\"]|$)" "$AGENT_DIR/config.yml"; then
+  ok "modelRoles.smol → beefsms/deepseek-flash"
+else
+  bad "config.yml smol role is not beefsms/deepseek-flash"
+fi
+
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq '^[[:space:]]*slow:' "$AGENT_DIR/config.yml"; then
+  bad "config.yml still presets modelRoles.slow"
+else
+  ok "modelRoles.slow not preset"
+fi
+
 if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq '(^|[[:space:]])beefsms[[:space:]]*$' "$AGENT_DIR/config.yml" && grep -q 'modelProviderOrder' "$AGENT_DIR/config.yml"; then
   ok "modelProviderOrder prefers beefsms"
 else
