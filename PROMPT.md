@@ -28,7 +28,7 @@
 
 ## 步骤
 
-1. 确认 git / python3 / curl。没有 bun 就 `curl -fsSL https://bun.sh/install | bash`（需要 ≥ 1.3.14）。
+1. 确认 git / python3 / curl。没有 bun 就 `curl -fsSL https://bun.sh/install | bash`（需要 ≥ 1.3.14）。不要为了跑 omp 去装 Rust / Bazel；`install.sh` 会下载预编译 natives。
 2. 若还没有 checkout：
    `git clone https://github.com/fobole-openthedoor/oh-my-pi.git $HOME/oh-my-pi`
 3. 跑 `$HOME/oh-my-pi/scripts/hacker/install.sh`（里面会 clone Claude-Red 到 `$HOME/tools/claude-red`）。若跳过了，再跑 `install-claude-red.sh`。

@@ -19,15 +19,36 @@ need() {
   fi
 }
 
+bun_new_enough() {
+  python3 - "$1" <<'PY'
+import sys
+ver = sys.argv[1].split("+", 1)[0]
+parts = []
+for bit in ver.split("."):
+    try:
+        parts.append(int(bit))
+    except ValueError:
+        parts.append(0)
+while len(parts) < 3:
+    parts.append(0)
+sys.exit(0 if tuple(parts[:3]) >= (1, 3, 14) else 1)
+PY
+}
+
 ensure_bun() {
-  if command -v bun >/dev/null 2>&1; then
-    return 0
-  fi
-  echo "omp-install: installing bun"
-  curl -fsSL https://bun.sh/install | bash
   export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
   export PATH="$BUN_INSTALL/bin:$PATH"
+  if command -v bun >/dev/null 2>&1 && bun_new_enough "$(bun --version)"; then
+    return 0
+  fi
+  echo "omp-install: installing bun (>= 1.3.14)"
+  curl -fsSL https://bun.sh/install | bash
+  export PATH="$BUN_INSTALL/bin:$PATH"
   need bun
+  if ! bun_new_enough "$(bun --version)"; then
+    echo "omp-install: bun $(bun --version) is too old (need >= 1.3.14)" >&2
+    exit 1
+  fi
 }
 
 pick_launcher_dir() {
@@ -44,6 +65,7 @@ pick_launcher_dir() {
 
 need git
 need python3
+need curl
 ensure_bun
 
 clone_or_update() {
@@ -69,6 +91,10 @@ fi
 
 echo "omp-install: bun install"
 bun install
+if [ -f "$KIT/install-natives.sh" ]; then
+  echo "omp-install: prebuilt natives"
+  sh "$KIT/install-natives.sh"
+fi
 if [ -x "$PREFIX/scripts/link-omp.sh" ]; then
   echo "omp-install: link-omp.sh"
   sh "$PREFIX/scripts/link-omp.sh" || \

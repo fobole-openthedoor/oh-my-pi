@@ -48,7 +48,7 @@ If `/usr/local/bin` is not writable, the launcher lands in `~/.local/bin`. Put t
 
 | Path | Role |
 | --- | --- |
-| `~/oh-my-pi` | this fork, `bun install` + `scripts/link-omp.sh` |
+| `~/oh-my-pi` | this fork, `bun install` + prebuilt natives + `scripts/link-omp.sh` |
 | `/usr/local/bin/omp` (or `~/.local/bin/omp`) | `launch.sh` — sources the env file so other `OPENAI_BASE_URL` values in `~/.bashrc` do not leak in |
 | `~/.config/omp/env` | provider, models, timeouts, keys |
 | `~/.omp/agent/models.yml` | beefsms custom provider (apiKey = env var name) |

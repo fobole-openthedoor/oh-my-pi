@@ -4,7 +4,7 @@
 
 供应商已经写死：`http://openai.beefsms.com:38888/v1`（`happy/kimi-k3` / `happy/glm-5.3` / `happy/qwen-3.8-fast`）。Key 自己填，不进 git。
 
-需要：`git`、`python3`、Bun ≥ 1.3.14。没有 bun 脚本会装。
+需要：`git`、`python3`、Bun ≥ 1.3.14。没有 bun 脚本会装。不需要本机装 Rust：`install.sh` 会拉对应平台的预编译 `pi-natives` addon。
 
 ## 人：三条命令
 
