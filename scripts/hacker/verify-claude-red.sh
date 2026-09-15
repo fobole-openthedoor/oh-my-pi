@@ -97,6 +97,12 @@ else
   bad "config.yml vision role is not beefsms/deepseek-flash:low"
 fi
 
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq "default:[[:space:]]*['\"]?beefsms/happy/glm-5.3-plus" "$AGENT_DIR/config.yml"; then
+  ok "modelRoles.default → beefsms/happy/glm-5.3-plus"
+else
+  bad "config.yml default role is not beefsms/happy/glm-5.3-plus"
+fi
+
 if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq "smol:[[:space:]]*['\"]?beefsms/deepseek-flash(['\"]|$)" "$AGENT_DIR/config.yml"; then
   ok "modelRoles.smol → beefsms/deepseek-flash"
 else

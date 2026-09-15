@@ -6,7 +6,7 @@
 
 This directory is the install kit: can1357/oh-my-pi plus beefsms OpenAI-compat provider, reverse / crack / pentest skills, Ghidra MCP, and the local launchers.
 
-Provider is the same for everyone: `http://openai.beefsms.com:38888/v1` (`happy/kimi-k3`, `happy/glm-5.3`, `happy/glm-5.3-plus`, `happy/qwen-3.8-fast`, `deepseek-flash`). `modelRoles.vision` is `beefsms/deepseek-flash:low`. Keys stay on the machine that runs the CLI.
+Provider is the same for everyone: `http://openai.beefsms.com:38888/v1` (`happy/kimi-k3`, `happy/glm-5.3`, `happy/glm-5.3-plus`, `happy/qwen-3.8-fast`, `deepseek-flash`). `modelRoles.default` is `beefsms/happy/glm-5.3-plus`, `smol` is `beefsms/deepseek-flash`, `vision` is `beefsms/deepseek-flash:low`, and `slow` is not preset. Keys stay on the machine that runs the CLI.
 
 ## One command
 
@@ -51,7 +51,7 @@ If `/usr/local/bin` is not writable, the launcher lands in `~/.local/bin`. Put t
 | `/usr/local/bin/omp` (or `~/.local/bin/omp`) | `launch.sh` — sources the env file so other `OPENAI_BASE_URL` values in `~/.bashrc` do not leak in |
 | `~/.config/omp/env` | provider, models, timeouts, keys |
 | `~/.omp/agent/models.yml` | beefsms custom provider (apiKey = env var name) |
-| `~/.omp/agent/config.yml` | roles (smol = `beefsms/deepseek-flash`, vision = `beefsms/deepseek-flash:low`, no `slow` preset), yolo, shake-only auto-compact, thinking max |
+| `~/.omp/agent/config.yml` | roles (default = `beefsms/happy/glm-5.3-plus`, smol = `beefsms/deepseek-flash`, vision = `beefsms/deepseek-flash:low`, no `slow` preset), yolo, shake-only auto-compact, thinking max |
 | `~/.omp/agent/AGENTS.md` | Work mode: 逆向 / 破解 / 渗透 |
 | `~/.omp/agent/mcp.json` | ghidra stdio MCP |
 | `~/.omp/agent/extensions/` | GLM auto-continue, Kimi thinking, beefsms `/login`, domain-route, ghidra-open |

@@ -30,6 +30,7 @@ KIT_OWNED = {
         "repeatGap": 2,
     },
     "modelRoles": {
+        "default": "beefsms/happy/glm-5.3-plus",
         "smol": "beefsms/deepseek-flash",
         "vision": "beefsms/deepseek-flash:low",
     },
@@ -125,7 +126,7 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yml"
         path.write_text(
-            "modelRoles:\n  default: keep-me\n  slow: beefsms/happy/glm-5.3\ncompaction:\n  enabled: false\n  idleTimeoutSeconds: 60\n",
+            "modelRoles:\n  default: keep-me\n  commit: keep-commit\n  slow: beefsms/happy/glm-5.3\ncompaction:\n  enabled: false\n  idleTimeoutSeconds: 60\n",
             encoding="utf-8",
         )
         status = merge_file(path, None)
@@ -133,8 +134,11 @@ def self_test() -> int:
             print(f"FAIL expected merged, got {status}", file=sys.stderr)
             return 1
         data = load_yaml(path)
-        if data.get("modelRoles", {}).get("default") != "keep-me":
-            print("FAIL user modelRoles overwritten", file=sys.stderr)
+        if data.get("modelRoles", {}).get("default") != "beefsms/happy/glm-5.3-plus":
+            print("FAIL modelRoles.default not beefsms/happy/glm-5.3-plus", file=sys.stderr)
+            return 1
+        if data.get("modelRoles", {}).get("commit") != "keep-commit":
+            print("FAIL user modelRoles.commit overwritten", file=sys.stderr)
             return 1
         if data.get("modelRoles", {}).get("vision") != "beefsms/deepseek-flash:low":
             print("FAIL modelRoles.vision not beefsms/deepseek-flash:low", file=sys.stderr)
