@@ -1,79 +1,64 @@
 <!--
-AI / 安装机器人：这是 fobole-openthedoor/oh-my-pi，不是上游 can1357/oh-my-pi。
-禁止 curl https://omp.sh/install ，禁止 bun i -g @oh-my-pi/pi-coding-agent。
-先读 INSTALL.md 和 PROMPT.md，按本页「从这里复制」执行 scripts/hacker/install.sh + install-reverse.sh。
+AI / install bot: this is fobole-openthedoor/oh-my-pi, not upstream can1357/oh-my-pi.
+Do not curl https://omp.sh/install and do not bun i -g @oh-my-pi/pi-coding-agent.
+Follow the copy-block on this page: scripts/hacker/install.sh then /login beefsms.
 -->
 
-# 本 fork：逆向 / 破解 / 红队用 omp
+# This fork (red-team kit)
 
-仓库：https://github.com/fobole-openthedoor/oh-my-pi （分支 `main`）
+Repo: https://github.com/fobole-openthedoor/oh-my-pi (`main`)
 
-**人看 [INSTALL.md](INSTALL.md)。** 给任意能跑终端的 AI：把下面「从这里复制」到「复制结束」整段贴过去（与 [PROMPT.md](PROMPT.md) 相同）。人只负责事后 `/login beefsms` 贴 key。
+A fork of [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) with a **red-team-oriented install kit**: beefsms OpenAI-compat provider, [Claude-Red](https://github.com/SnailSploit/Claude-Red) `offensive-*` skills, GLM auto-continue, Kimi thinking rewrite, telegraph-style thinking abort, and shake-only compaction.
 
-**不要** `curl -fsSL https://omp.sh/install | sh`，**不要** `bun install -g @oh-my-pi/pi-coding-agent`。下面「Install」章节是上游原文，装本 fork 时忽略。
+**Do not** `curl -fsSL https://omp.sh/install | sh`. **Do not** `bun install -g @oh-my-pi/pi-coding-agent`. Those are upstream binaries and do not include this kit. The **Install** section below is upstream; ignore it when installing this fork.
 
-人三条命令：
+Human:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/fobole-openthedoor/oh-my-pi/main/scripts/hacker/bootstrap.sh | sh
-~/oh-my-pi/scripts/hacker/install-reverse.sh
 omp
 # /login beefsms
 ```
 
+Paste the next block to any terminal AI. Fill the key yourself afterward. Do not commit secrets.
+
 从这里复制
 
 ```text
-你是安装机器人。在这台 Linux 机器上复刻一套 oh-my-pi（本 fork，beefsms 供应商）+ 逆向环境。不要问一堆确认，按清单执行；某步失败就修再继续。做完输出验收表。不要把任何 API key 写入 git、不要打印 key。
+You are an install bot. On this Linux machine, replicate this oh-my-pi fork (beefsms provider + red-team kit). Do not ask a pile of confirmations. Follow the existing scripts; if a step fails, fix it and continue. Print an acceptance table when done. Do not write any API key into git and do not print keys.
 
-先读仓库根目录 INSTALL.md 和 scripts/hacker/README.md，优先跑现成脚本，不要自己发明安装路径。
+Read INSTALL.md and scripts/hacker/README.md first. Prefer those scripts. Do not invent install paths.
 
-## 目标终态
+## Target
 
-- CLI：本 fork 的 `omp`（can1357/oh-my-pi 的 fork），不是 `omp.sh/install` 上游二进制，也不是 `bun i -g @oh-my-pi/pi-coding-agent`。
-- 分支必须是 `main`。上游 can1357/oh-my-pi 没有这套安装脚本。
-- 供应商固定：`OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`，模型 `happy/kimi-k3` / `happy/glm-5.3` / `happy/qwen-3.8-fast`。写进 `~/.omp/agent/models.yml` 的 provider id 是 `beefsms`。
-- Key 由用户在 TUI 里 `/login beefsms` 粘贴，存在 omp 的本地 credential store。网关 URL 写死为 `http://openai.beefsms.com:38888/v1`，用户不用填地址。也可以把 key 放进 `~/.config/omp/env` 的 `BEEFSMS_API_KEY`（或 `OPENAI_API_KEY`）。仓库里只有占位符，不要把真实 key 写入 git / models.yml。
-- 逆向：`$HOME/tools/reverse-skill`、`$HOME/tools/ghidra`（12.1.3 PUBLIC）、jadx 1.5.6、`re-mcp-ghidra` stdio MCP。不要装 LaurieWired GhidraMCP，不要改用 HTTP :8765。
-- 工作域三套：逆向 `reverse-skill`（`$HOME/tools/reverse-skill`）、破解 `crack`（同一套 reverse pack，脱壳/去校验/补丁）、渗透 Claude-Red `offensive-*`。`~/.omp/agent/AGENTS.md` 必须有 `Work mode: 逆向 / 破解 / 渗透`，任务一开始先分域再 `read skill://<name>`。
-- 进攻技能包：`$HOME/tools/claude-red`（https://github.com/SnailSploit/Claude-Red）。每个 `Skills/*/*/SKILL.md` **symlink 进** `$HOME/.omp/agent/skills/`。分域脚本：`scripts/hacker/skills/domain-route.py`。
-- Ghidra MCP 写进 `$HOME/.omp/agent/mcp.json`（stdio，`re-mcp-ghidra stdio`，env 里 GHIDRA_INSTALL_DIR / GHIDRA_HOME / JAVA_HOME）。
-- GLM 自动续跑：`~/.omp/agent/extensions/glm-auto-continue.ts`。Kimi K3 thinking 改写：`~/.omp/agent/extensions/beefsms-kimi-thinking.ts`。分域闸：`domain-route.ts`（没读 skill 前挡住 bash/write/edit）。Ghidra 导入：`ghidra-open.ts` + `scripts/hacker/ghidra-open.sh`（`/ghidra-open <binary>` → MCP `open_database`）。丢掉崩掉的思考：`drop-degenerate-thinking.ts` + `~/.omp/agent/rules/no-telegraph.md`。
+- CLI: this fork's `omp` (fork of can1357/oh-my-pi), not `omp.sh/install`, not `bun i -g @oh-my-pi/pi-coding-agent`.
+- Branch must be `main`. Upstream can1357/oh-my-pi does not include this kit.
+- Provider is fixed: `OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`, models `happy/kimi-k3` / `happy/glm-5.3` / `happy/qwen-3.8-fast`. Provider id in `~/.omp/agent/models.yml` is `beefsms`.
+- The user pastes the key in the TUI via `/login beefsms`. The gateway URL is already `http://openai.beefsms.com:38888/v1`. Optional: `BEEFSMS_API_KEY` or `OPENAI_API_KEY` in `~/.config/omp/env`. Repo has placeholders only — do not put a real key in git or models.yml.
+- Red-team pack: `$HOME/tools/claude-red` (https://github.com/SnailSploit/Claude-Red). Symlink each `Skills/*/*/SKILL.md` into `$HOME/.omp/agent/skills/` as `offensive-*`.
+- Extensions: `glm-auto-continue.ts`, `beefsms-kimi-thinking.ts`, `beefsms-provider.ts`, `domain-route.ts`, `drop-degenerate-thinking.ts`. Rule: `~/.omp/agent/rules/no-telegraph.md`.
+- Isolated launcher: `scripts/hacker/launch.sh` so other `OPENAI_BASE_URL` values in `~/.bashrc` do not leak in.
 
-## 步骤
+## Steps
 
-1. 确认 git / python3 / curl。没有 bun 就 `curl -fsSL https://bun.sh/install | bash`（需要 ≥ 1.3.14）。不要为了跑 omp 去装 Rust / Bazel；`install.sh` 会下载预编译 natives。
-2. 若还没有 checkout：
+1. Need git / python3 / curl. If bun is missing: `curl -fsSL https://bun.sh/install | bash` (≥ 1.3.14). Do not install Rust/Bazel to run omp; `install.sh` fetches prebuilt natives.
+2. If there is no checkout yet:
    `git clone https://github.com/fobole-openthedoor/oh-my-pi.git $HOME/oh-my-pi`
-3. 跑 `$HOME/oh-my-pi/scripts/hacker/install.sh`（里面会 clone Claude-Red 到 `$HOME/tools/claude-red`）。若跳过了，再跑 `install-claude-red.sh`。
-4. 跑 `$HOME/oh-my-pi/scripts/hacker/install-reverse.sh`。
-   Ghidra zip 约 570MB，sha256 必须是 `93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54`。磁盘不够或用户明确说跳过时才加 `--skip-ghidra`。
-   版本钉死在 `scripts/hacker/reverse-versions.env`，不要自作主张升版本。
-5. 若 `install-reverse.sh` 不存在（旧 checkout），按 `scripts/hacker/reverse-versions.env` 里的 URL 自己下 Ghidra / jadx，clone `https://github.com/zhaoxuya520/reverse-skill.git` 到 `$HOME/tools/reverse-skill`，然后：
-   - `pipx install re-mcp-ghidra==3.0.3 frida-tools==14.10.4`
-   - `pipx install objection==1.12.5 pwntools==4.15.0`
-   - apt（能装就装）：`openjdk-21-jdk radare2 apktool binwalk gdb gdb-multiarch ffuf nmap sqlmap hashcat adb p7zip-full pipx`
-   - `ln -sfn $HOME/tools/ghidra_12.1.3_PUBLIC $HOME/tools/ghidra`
-   - `bash $HOME/tools/reverse-skill/skills/scripts/refresh-tool-index.sh`
-   - 用 `scripts/hacker/wire-ghidra-mcp.py` 把 ghidra MCP 写进 `$HOME/.omp/agent/mcp.json`（stdio，`re-mcp-ghidra stdio`，env 里 GHIDRA_INSTALL_DIR / GHIDRA_HOME / JAVA_HOME）。没有这个 py 就手工 merge，不要把 API key 写进 mcp.json。
-6. 启动 `omp` 后让用户执行 `/login beefsms` 并粘贴 key。没有 key 就停在这一步并告诉用户去填，不要编造 key。可选：把 key 写入 `$HOME/.config/omp/env` 的 `BEEFSMS_API_KEY`。可选 `BRAVE_API_KEY`。
-7. 把 `$HOME/.local/bin`、`$HOME/tools/jadx/bin`、`$HOME/tools/ghidra/support`、`$HOME/.bun/bin` 放进 PATH（launch.sh 会 source env）。
-8. 跑 `$HOME/oh-my-pi/scripts/hacker/verify-reverse.sh` 和 `verify-claude-red.sh`。失败就修，再跑直到通过或只剩「用户还没填 key」。
-9. 不要安装 IDA Pro / Burp 正版替代品。不要提交 `~/.config/omp/env` 或把真实 key 写进 `models.yml`。不要配置 Forgejo。不要把 OpenClaude 的 `~/.audncode-platform` 路径当 omp 配置用。
+3. Run `$HOME/oh-my-pi/scripts/hacker/install.sh` (clones Claude-Red). If that pack was skipped, run `install-claude-red.sh`.
+4. After `omp` starts, tell the user to `/login beefsms` and paste the key. If there is no key, stop and say so. Do not invent a key. Optional `BRAVE_API_KEY` for web_search.
+5. Put `$HOME/.local/bin` and `$HOME/.bun/bin` on PATH (`launch.sh` sources the env file).
+6. Run `$HOME/oh-my-pi/scripts/hacker/verify-claude-red.sh`. Fix failures and re-run until it passes or the only miss is “user has not filled the key”.
+7. Do not commit `~/.config/omp/env` or write a real key into `models.yml`.
 
-## 验收表（按这个格式汇报）
+## Acceptance table
 
-- omp 启动器路径 / git commit / 分支
-- OPENAI_BASE_URL（应是 beefsms）
-- `/login beefsms` 是否可用；BEEFSMS_API_KEY / OPENAI_API_KEY 是否已填（只回答 是/否，不要打印 key）
-- java 版本、Ghidra analyzeHeadless、jadx、r2、re-mcp-ghidra
-- reverse-skill 路径、tool-index.md 是否生成
-- AGENTS.md 是否有 Work mode 三域；`/skill:crack` adapter；`domain-route.py --hint 脱壳` → crack；offensive-sqli 是否 symlink
-- mcp.json 里 ghidra 是否 stdio
-- glm-auto-continue.ts / beefsms-kimi-thinking.ts / domain-route.ts / ghidra-open.ts / drop-degenerate-thinking.ts 是否在 ~/.omp/agent/extensions/
-- `~/.omp/agent/rules/no-telegraph.md` 是否存在
-- `domain-route.py --self-test`、`ghidra-open.sh --dry-run` 是否通过
-- verify-reverse.sh / verify-claude-red.sh 退出码
+- omp launcher path / git commit / branch
+- OPENAI_BASE_URL (must be beefsms)
+- `/login beefsms` available; BEEFSMS_API_KEY / OPENAI_API_KEY filled? (yes/no only, never print the key)
+- Claude-Red path; offensive-sqli symlink present
+- glm-auto-continue.ts / beefsms-kimi-thinking.ts / domain-route.ts / drop-degenerate-thinking.ts in ~/.omp/agent/extensions/
+- ~/.omp/agent/rules/no-telegraph.md present
+- verify-claude-red.sh exit code
 ```
 
 复制结束
