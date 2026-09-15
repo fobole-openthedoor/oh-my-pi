@@ -122,6 +122,8 @@ export interface SegmentContext {
 		premiumRequests: number;
 		cost: number;
 		tokensPerSecond: number | null;
+		/** Last turn time-to-first-token in ms, or live wait while the stream has not emitted yet. */
+		ttftMs?: number | null;
 	};
 	/** Context usage percent, or null when unknown (e.g. right after compaction). */
 	contextPercent: number | null;

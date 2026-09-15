@@ -575,7 +575,24 @@ const tokenRateSegment: StatusLineSegment = {
 		const { tokensPerSecond } = ctx.usageStats;
 		if (!tokensPerSecond) return { content: "", visible: false };
 
-		const content = withIcon(theme.icon.throughput, `${statusValue(ctx, tokensPerSecond.toFixed(1))} tok/s`);
+		const content = withIcon(theme.icon.throughput, `${statusValue(ctx, tokensPerSecond.toFixed(1))} ts`);
+		return { content: theme.fg("statusLineOutput", content), visible: true };
+	},
+};
+
+function formatTtft(ms: number): string {
+	if (ms < 1000) return `${Math.round(ms)}ms`;
+	if (ms < 10_000) return `${(ms / 1000).toFixed(1)}s`;
+	return `${Math.round(ms / 1000)}s`;
+}
+
+const ttftSegment: StatusLineSegment = {
+	id: "ttft",
+	render(ctx) {
+		const ttftMs = ctx.usageStats.ttftMs;
+		if (!ttftMs || ttftMs <= 0) return { content: "", visible: false };
+
+		const content = withIcon(theme.icon.time, `ttft ${statusValue(ctx, formatTtft(ttftMs))}`);
 		return { content: theme.fg("statusLineOutput", content), visible: true };
 	},
 };
@@ -959,6 +976,7 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 	token_out: tokenOutSegment,
 	token_total: tokenTotalSegment,
 	token_rate: tokenRateSegment,
+	ttft: ttftSegment,
 	cost: costSegment,
 	context_pct: contextPctSegment,
 	context_total: contextTotalSegment,

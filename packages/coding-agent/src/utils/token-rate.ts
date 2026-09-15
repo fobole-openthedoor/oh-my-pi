@@ -14,6 +14,7 @@ type AssistantLikeMessage = {
 	role: "assistant";
 	timestamp: number;
 	duration?: number;
+	ttft?: number;
 	usage: AssistantUsage;
 };
 
@@ -21,6 +22,7 @@ type MaybeAssistantMessage = {
 	role?: string;
 	timestamp?: number;
 	duration?: number;
+	ttft?: number;
 	usage?: {
 		output?: number;
 	};
@@ -69,4 +71,26 @@ export function calculateTokensPerSecond(
 	if (!Number.isFinite(tokensPerSecond) || tokensPerSecond <= 0) return null;
 
 	return tokensPerSecond;
+}
+
+/** Time-to-first-token for the latest assistant turn, in milliseconds. */
+export function calculateTtftMs(
+	messages: ReadonlyArray<MaybeAssistantMessage>,
+	isStreaming: boolean,
+	nowMs: number = Date.now(),
+): number | null {
+	const assistant = getLastAssistantMessage(messages);
+	if (!assistant) return null;
+
+	if (typeof assistant.ttft === "number" && Number.isFinite(assistant.ttft) && assistant.ttft > 0) {
+		return assistant.ttft;
+	}
+
+	// Stream is open but no output yet: show live wait as TTFT.
+	if (isStreaming && assistant.usage.output <= 0) {
+		const elapsed = nowMs - assistant.timestamp;
+		return elapsed > 0 ? elapsed : null;
+	}
+
+	return null;
 }

@@ -15,3 +15,5 @@ providers:
   webSearchOrder:
     - brave
     - auto
+statusLine:
+  contextLine: percentage

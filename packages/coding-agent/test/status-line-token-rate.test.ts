@@ -4,7 +4,7 @@ import type { AssistantMessage } from "@oh-my-pi/pi-ai";
 import { renderSegment } from "@oh-my-pi/pi-coding-agent/modes/components/status-line/segments";
 import type { SegmentContext } from "@oh-my-pi/pi-coding-agent/modes/components/status-line/types";
 import { initTheme } from "@oh-my-pi/pi-coding-agent/modes/theme/theme";
-import { calculateTokensPerSecond } from "@oh-my-pi/pi-coding-agent/utils/token-rate";
+import { calculateTokensPerSecond, calculateTtftMs } from "@oh-my-pi/pi-coding-agent/utils/token-rate";
 
 beforeAll(async () => {
 	await initTheme();
@@ -31,7 +31,7 @@ function assistantMessage(overrides?: Partial<AssistantMessage>): AssistantMessa
 	};
 }
 
-function ctxWithTokenRate(tokensPerSecond: number | null): SegmentContext {
+function ctxWithTokenRate(tokensPerSecond: number | null, ttftMs: number | null = null): SegmentContext {
 	return {
 		usageStats: {
 			input: 0,
@@ -41,6 +41,7 @@ function ctxWithTokenRate(tokensPerSecond: number | null): SegmentContext {
 			premiumRequests: 0,
 			cost: 0,
 			tokensPerSecond,
+			ttftMs,
 		},
 	} as unknown as SegmentContext;
 }
@@ -52,7 +53,7 @@ describe("token_rate status-line segment", () => {
 
 		expect(rendered.visible).toBe(true);
 		expect(content).toContain("35.5");
-		expect(content).toMatch(/(?:\/s|\bs\b|\bsec(?:ond)?s?\b|\btps\b)/i);
+		expect(content).toMatch(/\bts\b/i);
 		expect(content).not.toContain("35.5/s");
 		expect(content).not.toMatch(/\b\d+(?:\.\d+)?\/s\b/);
 	});
@@ -99,5 +100,44 @@ describe("token rate calculation", () => {
 			false,
 		);
 		expect(rate).toBeNull();
+	});
+});
+
+describe("ttft status-line segment", () => {
+	it("renders milliseconds under one second", () => {
+		const rendered = renderSegment("ttft", ctxWithTokenRate(null, 340));
+		const content = stripVTControlCharacters(rendered.content);
+		expect(rendered.visible).toBe(true);
+		expect(content).toMatch(/ttft/i);
+		expect(content).toContain("340ms");
+	});
+
+	it("renders seconds with one decimal above one second", () => {
+		const rendered = renderSegment("ttft", ctxWithTokenRate(null, 1240));
+		const content = stripVTControlCharacters(rendered.content);
+		expect(rendered.visible).toBe(true);
+		expect(content).toContain("1.2s");
+	});
+
+	it("is hidden when ttft is missing", () => {
+		const rendered = renderSegment("ttft", ctxWithTokenRate(null, null));
+		expect(rendered.visible).toBe(false);
+	});
+});
+
+describe("ttft calculation", () => {
+	it("uses provider-reported ttft when present", () => {
+		expect(calculateTtftMs([assistantMessage({ ttft: 880, duration: 2_000 })], false)).toBe(880);
+	});
+
+	it("uses live wait while streaming with no output yet", () => {
+		const base = assistantMessage();
+		expect(
+			calculateTtftMs(
+				[assistantMessage({ timestamp: 10_000, ttft: undefined, usage: { ...base.usage, output: 0 } })],
+				true,
+				10_450,
+			),
+		).toBe(450);
 	});
 });

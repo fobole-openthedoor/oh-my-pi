@@ -27,7 +27,7 @@ import { type ActiveRepoContext, resolveActiveRepoContextSync } from "../../../u
 import { withTimeoutSignal } from "../../../utils/fetch-timeout";
 import { GH_COMMAND_TIMEOUT_MS, github } from "../../../utils/github";
 import { getSessionAccentAnsi, getSessionAccentHex } from "../../../utils/session-color";
-import { calculateTokensPerSecond } from "../../../utils/token-rate";
+import { calculateTokensPerSecond, calculateTtftMs } from "../../../utils/token-rate";
 import { sanitizeStatusText } from "../../shared";
 import { getThemeEpoch, theme } from "../../theme/theme";
 import {
@@ -563,6 +563,8 @@ export class StatusLineComponent implements Component {
 	#defaultBranchCwd: string | undefined = undefined;
 	#lastTokensPerSecond: number | null = null;
 	#lastTokensPerSecondTimestamp: number | null = null;
+	#lastTtftMs: number | null = null;
+	#lastTtftTimestamp: number | null = null;
 
 	// Provider usage caching (5-min TTL, OAuth/sub only)
 	#cachedUsage: {
@@ -1145,6 +1147,8 @@ export class StatusLineComponent implements Component {
 		this.#contextUsageCache = undefined;
 		this.#lastTokensPerSecond = null;
 		this.#lastTokensPerSecondTimestamp = null;
+		this.#lastTtftMs = null;
+		this.#lastTtftTimestamp = null;
 	}
 
 	/**
@@ -1524,6 +1528,36 @@ export class StatusLineComponent implements Component {
 		// its sticky per-assistant-message cache so the badge doesn't flicker
 		// off in the brief gap between stream end and the finalized message.
 		return this.#getMainSessionTokensPerSecond();
+	}
+
+	#getTtftMs(): number | null {
+		let lastAssistantTimestamp: number | null = null;
+		for (let i = this.session.state.messages.length - 1; i >= 0; i--) {
+			const message = this.session.state.messages[i];
+			if (message?.role === "assistant") {
+				lastAssistantTimestamp = message.timestamp;
+				break;
+			}
+		}
+
+		if (lastAssistantTimestamp === null) {
+			this.#lastTtftMs = null;
+			this.#lastTtftTimestamp = null;
+			return null;
+		}
+
+		const ttftMs = calculateTtftMs(this.session.state.messages, this.session.isStreaming);
+		if (ttftMs !== null) {
+			this.#lastTtftMs = ttftMs;
+			this.#lastTtftTimestamp = lastAssistantTimestamp;
+			return ttftMs;
+		}
+
+		if (this.#lastTtftTimestamp === lastAssistantTimestamp) {
+			return this.#lastTtftMs;
+		}
+
+		return null;
 	}
 
 	/**
@@ -2044,6 +2078,7 @@ export class StatusLineComponent implements Component {
 		const usageStats = {
 			...aggregateUsageStats,
 			tokensPerSecond: this.#getTokensPerSecond(),
+			ttftMs: this.#getTtftMs(),
 		};
 
 		let contextWindow = state.model?.contextWindow ?? this.session.model?.contextWindow ?? 0;

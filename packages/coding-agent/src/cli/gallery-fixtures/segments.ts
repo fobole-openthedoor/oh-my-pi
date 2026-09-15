@@ -60,6 +60,7 @@ export function createGallerySegmentContext(sessionOptions?: GallerySessionOptio
 			premiumRequests: sessionOptions?.premiumRequests ?? 2,
 			cost: sessionOptions?.cost ?? 0.42,
 			tokensPerSecond: 87.3,
+			ttftMs: 930,
 		},
 		contextPercent: 62,
 		contextTokens: 124_000,
@@ -183,6 +184,15 @@ function variantsFor(id: StatusLineSegmentId): readonly SegmentVariantSpec[] {
 					session: { cost: 0, premiumRequests: 2, advisorCost: 0 },
 				},
 			];
+		case "ttft":
+			return [
+				{ label: "sub-second", context: { usageStats: { ttftMs: 340 } as SegmentContext["usageStats"] } },
+				{ label: "canonical" },
+			];
+		case "token_rate":
+			return [{ label: "canonical" }];
+		case "cache_hit":
+			return [{ label: "canonical" }];
 		case "context_pct":
 			return [
 				{ label: "normal", context: { contextPercent: 22, contextTokens: 44_000 } },

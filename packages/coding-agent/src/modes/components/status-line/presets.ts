@@ -3,7 +3,7 @@ import type { PresetDef, StatusLinePreset } from "./types";
 export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 	default: {
 		leftSegments: ["pi", "vim", "model", "mode", "collab", "path", "git", "pr", "context_pct", "cost"],
-		rightSegments: ["session_name"],
+		rightSegments: ["session_name", "cache_hit", "ttft", "token_rate"],
 		separator: "powerline-thin",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
@@ -14,7 +14,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 
 	minimal: {
 		leftSegments: ["vim", "path", "git"],
-		rightSegments: ["session_name", "mode", "context_pct"],
+		rightSegments: ["session_name", "mode", "cache_hit", "ttft", "token_rate", "context_pct"],
 		separator: "slash",
 		segmentOptions: {
 			path: { abbreviate: true, maxLength: 30 },
@@ -24,7 +24,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 
 	compact: {
 		leftSegments: ["vim", "model", "mode", "git", "pr"],
-		rightSegments: ["session_name", "cost", "context_pct"],
+		rightSegments: ["session_name", "cache_hit", "ttft", "token_rate", "cost", "context_pct"],
 		separator: "powerline-thin",
 		segmentOptions: {
 			model: { showThinkingLevel: false },
@@ -39,6 +39,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"cache_hit",
 			"token_in",
 			"token_out",
+			"ttft",
 			"token_rate",
 			"cache_read",
 			"cost",
@@ -64,6 +65,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 			"token_out",
 			"cache_read",
 			"cache_write",
+			"ttft",
 			"token_rate",
 			"cost",
 			"context_pct",
@@ -83,7 +85,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 	ascii: {
 		// No Nerd Font dependencies
 		leftSegments: ["vim", "model", "mode", "path", "git", "pr"],
-		rightSegments: ["session_name", "token_total", "cost", "context_pct"],
+		rightSegments: ["session_name", "cache_hit", "ttft", "token_rate", "token_total", "cost", "context_pct"],
 		separator: "ascii",
 		segmentOptions: {
 			model: { showThinkingLevel: true },
@@ -95,7 +97,7 @@ export const STATUS_LINE_PRESETS: Record<StatusLinePreset, PresetDef> = {
 	custom: {
 		// User-defined - these are just defaults that get overridden
 		leftSegments: ["vim", "model", "mode", "path", "git", "pr"],
-		rightSegments: ["session_name", "token_total", "cost", "context_pct"],
+		rightSegments: ["session_name", "cache_hit", "ttft", "token_rate", "token_total", "cost", "context_pct"],
 		separator: "powerline-thin",
 		segmentOptions: {},
 	},
