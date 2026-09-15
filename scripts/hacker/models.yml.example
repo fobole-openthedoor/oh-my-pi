@@ -64,3 +64,25 @@ providers:
           supportsReasoningEffort: true
           thinkingFormat: qwen
           requiresReasoningContentForToolCalls: true
+      - id: deepseek-flash
+        name: DeepSeek Flash
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 384000
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: openai
+          maxTokensField: max_tokens
+          reasoningContentField: reasoning_content
+          requiresReasoningContentForToolCalls: true
+          requiresAssistantContentForToolCalls: true
+          allowsSyntheticReasoningContentForToolCalls: false
+          supportsToolChoice: false
+          stripImageInput: false
+          clampOutputToModelMax: true

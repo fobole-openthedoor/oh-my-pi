@@ -52,6 +52,27 @@ const MODELS: ProviderModelConfig[] = [
 			requiresReasoningContentForToolCalls: true,
 		},
 	},
+	{
+		id: "deepseek-flash",
+		name: "DeepSeek Flash",
+		reasoning: true,
+		input: ["text", "image"],
+		contextWindow: 1_000_000,
+		maxTokens: 384_000,
+		cost: ZERO_COST,
+		compat: {
+			supportsReasoningEffort: true,
+			thinkingFormat: "openai",
+			maxTokensField: "max_tokens",
+			reasoningContentField: "reasoning_content",
+			requiresReasoningContentForToolCalls: true,
+			requiresAssistantContentForToolCalls: true,
+			allowsSyntheticReasoningContentForToolCalls: false,
+			supportsToolChoice: false,
+			stripImageInput: false,
+			clampOutputToModelMax: true,
+		},
+	},
 ];
 
 function stripKey(raw: string): string {

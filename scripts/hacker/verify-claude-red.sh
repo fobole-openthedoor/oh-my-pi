@@ -77,8 +77,25 @@ fi
 
 if [ -f "$AGENT_DIR/extensions/beefsms-provider.ts" ]; then
   ok "beefsms-provider.ts present"
+  if grep -q 'id: "deepseek-flash"' "$AGENT_DIR/extensions/beefsms-provider.ts"; then
+    ok "beefsms model deepseek-flash"
+  else
+    bad "beefsms-provider.ts missing deepseek-flash"
+  fi
 else
   bad "beefsms-provider.ts missing"
+fi
+
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq 'vision:[[:space:]]*beefsms/deepseek-flash' "$AGENT_DIR/config.yml"; then
+  ok "modelRoles.vision → beefsms/deepseek-flash"
+else
+  bad "config.yml vision role is not beefsms/deepseek-flash"
+fi
+
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq '(^|[[:space:]])beefsms[[:space:]]*$' "$AGENT_DIR/config.yml" && grep -q 'modelProviderOrder' "$AGENT_DIR/config.yml"; then
+  ok "modelProviderOrder prefers beefsms"
+else
+  bad "config.yml modelProviderOrder missing beefsms"
 fi
 
 if [ -f "$AGENT_DIR/extensions/domain-route.ts" ]; then

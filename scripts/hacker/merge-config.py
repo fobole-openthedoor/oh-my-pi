@@ -29,6 +29,10 @@ KIT_OWNED = {
         "repeatMode": "after-gap",
         "repeatGap": 2,
     },
+    "modelRoles": {
+        "vision": "beefsms/deepseek-flash",
+    },
+    "modelProviderOrder": ["beefsms"],
 }
 
 
@@ -109,6 +113,12 @@ def self_test() -> int:
         data = load_yaml(path)
         if data.get("modelRoles", {}).get("default") != "keep-me":
             print("FAIL user modelRoles overwritten", file=sys.stderr)
+            return 1
+        if data.get("modelRoles", {}).get("vision") != "beefsms/deepseek-flash":
+            print("FAIL modelRoles.vision not beefsms/deepseek-flash", file=sys.stderr)
+            return 1
+        if data.get("modelProviderOrder") != ["beefsms"]:
+            print(f"FAIL modelProviderOrder {data.get('modelProviderOrder')}", file=sys.stderr)
             return 1
         compaction = data.get("compaction") or {}
         if compaction.get("enabled") is not True:
