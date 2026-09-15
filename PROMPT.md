@@ -24,7 +24,7 @@
 - 工作域三套：逆向 `reverse-skill`（`$HOME/tools/reverse-skill`）、破解 `crack`（同一套 reverse pack，脱壳/去校验/补丁）、渗透 Claude-Red `offensive-*`。`~/.omp/agent/AGENTS.md` 必须有 `Work mode: 逆向 / 破解 / 渗透`，任务一开始先分域再 `read skill://<name>`。
 - 进攻技能包：`$HOME/tools/claude-red`（https://github.com/SnailSploit/Claude-Red）。每个 `Skills/*/*/SKILL.md` **symlink 进** `$HOME/.omp/agent/skills/`。分域脚本：`scripts/hacker/skills/domain-route.py`。
 - Ghidra MCP 写进 `$HOME/.omp/agent/mcp.json`（stdio，`re-mcp-ghidra stdio`，env 里 GHIDRA_INSTALL_DIR / GHIDRA_HOME / JAVA_HOME）。
-- GLM 自动续跑：`~/.omp/agent/extensions/glm-auto-continue.ts`。Kimi K3 thinking 改写：`~/.omp/agent/extensions/beefsms-kimi-thinking.ts`。
+- GLM 自动续跑：`~/.omp/agent/extensions/glm-auto-continue.ts`。Kimi K3 thinking 改写：`~/.omp/agent/extensions/beefsms-kimi-thinking.ts`。分域闸：`domain-route.ts`（没读 skill 前挡住 bash/write/edit）。Ghidra 导入：`ghidra-open.ts` + `scripts/hacker/ghidra-open.sh`（`/ghidra-open <binary>` → MCP `open_database`）。
 
 ## 步骤
 
@@ -56,7 +56,8 @@
 - reverse-skill 路径、tool-index.md 是否生成
 - AGENTS.md 是否有 Work mode 三域；`/skill:crack` adapter；`domain-route.py --hint 脱壳` → crack；offensive-sqli 是否 symlink
 - mcp.json 里 ghidra 是否 stdio
-- glm-auto-continue.ts / beefsms-kimi-thinking.ts 是否在 ~/.omp/agent/extensions/
+- glm-auto-continue.ts / beefsms-kimi-thinking.ts / domain-route.ts / ghidra-open.ts 是否在 ~/.omp/agent/extensions/
+- `domain-route.py --self-test`、`ghidra-open.sh --dry-run` 是否通过
 - verify-reverse.sh / verify-claude-red.sh 退出码
 ```
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Classify a task into reverse | crack | pentest and print the next skill."""
+"""Classify a task into reverse | crack | pentest | skip and print the next skill."""
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -32,6 +33,10 @@ PENTEST_HITS = [
     r"口令", r"爆破", r"bounty", r"众测", r"红队", r"打域", r"域控",
     r"http://", r"https://", r"靶场", r"src\b",
 ]
+FILEISH = re.compile(
+    r"\.(apk|so|elf|exe|dll|bin|ipa)(\b|$)|样本|二进制|程序|软件|\bapk\b|\bso\b|\belf\b|\bexe\b",
+    re.I,
+)
 
 REVERSE_NEXT = "reverse-skill"
 CRACK_NEXT = "crack"
@@ -71,11 +76,11 @@ def classify(hint: str) -> tuple[str, int, int, int]:
         domain = "crack"
     elif r > 0:
         domain = "reverse"
+    elif FILEISH.search(blob):
+        domain = "reverse"
     else:
-        domain = "reverse" if re.search(r"\.(apk|so|elf|exe|dll|bin|ipa)(\b|$)", blob) else "pentest"
-        if domain == "pentest" and p == 0 and c == 0 and r == 0:
-            # Bare file-ish → reverse; otherwise pentest triage.
-            domain = "reverse" if re.search(r"样本|二进制|程序|软件|apk|so|elf|exe", blob) else "pentest"
+        # Greetings / omp questions / empty prompts: do not force a pack.
+        domain = "skip"
     return domain, r, c, p
 
 
@@ -102,6 +107,62 @@ def pentest_next(hint: str, claude_red_root: str) -> str:
     return PENTEST_FALLBACK
 
 
+def next_skill(domain: str, hint: str, claude_red_root: str) -> str:
+    if domain == "pentest":
+        return pentest_next(hint, claude_red_root)
+    if domain == "crack":
+        return CRACK_NEXT
+    if domain == "reverse":
+        return REVERSE_NEXT
+    return ""
+
+
+def result(hint: str, claude_red_root: str) -> dict:
+    domain, r, c, p = classify(hint)
+    nxt = next_skill(domain, hint, claude_red_root)
+    return {
+        "domain": domain,
+        "next": nxt,
+        "skip": domain == "skip",
+        "score": {"reverse": r, "crack": c, "pentest": p},
+    }
+
+
+def self_test() -> int:
+    cases = [
+        ("脱壳去校验", "crack", "crack"),
+        ("反编译这个 so", "reverse", "reverse-skill"),
+        ("sql注入", "pentest", None),
+        ("hello", "skip", ""),
+        ("你好", "skip", ""),
+        ("/login", "skip", ""),
+        ("foo.exe", "reverse", "reverse-skill"),
+        ("破解这个网站 https://example.com", "pentest", None),
+        ("分析样本", "reverse", "reverse-skill"),
+    ]
+    failed = 0
+    for hint, want_domain, want_next in cases:
+        domain, r, c, p = classify(hint)
+        if domain != want_domain:
+            print(f"FAIL domain {hint!r}: got {domain} want {want_domain} scores r={r} c={c} p={p}", file=sys.stderr)
+            failed += 1
+            continue
+        if want_next is None:
+            if domain != "pentest":
+                print(f"FAIL {hint!r}: expected pentest", file=sys.stderr)
+                failed += 1
+            continue
+        nxt = next_skill(domain, hint, os.environ.get("CLAUDE_RED_ROOT", str(Path.home() / "tools" / "claude-red")))
+        if nxt != want_next:
+            print(f"FAIL next {hint!r}: got {nxt} want {want_next}", file=sys.stderr)
+            failed += 1
+    if failed:
+        print(f"domain-route: {failed} self-test failure(s)", file=sys.stderr)
+        return 1
+    print("domain-route: self-test passed")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hint", default="")
@@ -109,18 +170,20 @@ def main() -> int:
         "--claude-red-root",
         default=os.environ.get("CLAUDE_RED_ROOT", str(Path.home() / "tools" / "claude-red")),
     )
+    parser.add_argument("--json", action="store_true", help="print one JSON object")
+    parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
+    if args.self_test:
+        return self_test()
     hint = args.hint.strip() or "<user task>"
-    domain, r, c, p = classify(hint)
-    if domain == "pentest":
-        nxt = pentest_next(hint, args.claude_red_root)
-    elif domain == "crack":
-        nxt = CRACK_NEXT
-    else:
-        nxt = REVERSE_NEXT
-    print(f"DOMAIN {domain}")
-    print(f"NEXT {nxt}")
-    print(f"SCORE reverse={r} crack={c} pentest={p}")
+    payload = result(hint, args.claude_red_root)
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False))
+        return 0
+    print(f"DOMAIN {payload['domain']}")
+    print(f"NEXT {payload['next'] or '-'}")
+    s = payload["score"]
+    print(f"SCORE reverse={s['reverse']} crack={s['crack']} pentest={s['pentest']}")
     return 0
 
 

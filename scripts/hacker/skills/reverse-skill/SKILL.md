@@ -17,6 +17,6 @@ Do not dump the whole pack into context. Route, then open one PRIMARY skill.
 4. `ACT`: Open `$REVERSE_SKILL_ROOT/skills/<PRIMARY>/SKILL.md` and follow ACTION REQUIRED.
 5. Tool paths **only** from `$REVERSE_SKILL_ROOT/skills/tool-index.md`. Missing tool → `bash $REVERSE_SKILL_ROOT/skills/scripts/bootstrap-reverse.sh <capability>`.
 
-Ghidra is at `$GHIDRA_INSTALL_DIR` (default `$HOME/tools/ghidra`). Headless: `analyzeHeadless`. Prefer the `ghidra` MCP server when it is connected.
+Ghidra is at `$GHIDRA_INSTALL_DIR` (default `$HOME/tools/ghidra`). For a local sample, run `/ghidra-open <binary>` or the `ghidra_open` tool (analyzeHeadless into `<dir>/ghidra_projects/<basename>`), then MCP `open_database` with that file_path (`run_auto_analysis` false if analysis already ran).
 
 Evidence chain: `$REVERSE_SKILL_ROOT/skills/ops/evidence-finding-path.md`.

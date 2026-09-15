@@ -15,7 +15,7 @@ def work_mode(fork_root: str, reverse_root: str, ghidra: str) -> str:
 
 On **every** user task, pick one domain first, then `read skill://<name>` immediately. Do not start acting until a skill is loaded.
 
-If the domain is unclear, run `python3 {route} --hint "<user task>"` and follow `NEXT`.
+The `domain-route` extension injects this and blocks bash/write/edit/scan until that skill is loaded (`DOMAIN_ROUTE=0` disables; `DOMAIN_ROUTE_GATE=0` injects only). If the domain is unclear, run `python3 {route} --hint "<user task>"` and follow `NEXT`.
 
 | Domain | User is talking about | Invoke |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ If the domain is unclear, run `python3 {route} --hint "<user task>"` and follow 
 
 Do not mix packs on the first turn. Reverse a binary then pentest the service → 逆向/破解 first, 渗透 second. 「破解网站」 is pentest; 「破解软件/授权/壳」 is crack.
 
-Reverse pack: `{reverse_root}` (`REVERSE_SKILL_ROOT`). Ghidra: `{ghidra}` (`analyzeHeadless`). Prefer the `ghidra` MCP server when connected.
+Reverse pack: `{reverse_root}` (`REVERSE_SKILL_ROOT`). Ghidra: `{ghidra}` (`analyzeHeadless`). Local sample: `/ghidra-open <binary>` (or tool `ghidra_open`), then MCP `open_database` with that file_path.
 """
 
 

@@ -13,7 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/fobole-openthedoor/oh-my-pi/main/sc
 ~/oh-my-pi/scripts/hacker/install-reverse.sh
 ```
 
-`install.sh` 会装三套工作域：逆向 `/skill:reverse-skill`、破解 `/skill:crack`、渗透（Claude-Red 的 `offensive-*` skills）。`~/.omp/agent/AGENTS.md` 负责先分域再读 skill。若渗透包被跳过，再跑 `~/oh-my-pi/scripts/hacker/install-claude-red.sh`。
+`install.sh` 会装三套工作域：逆向 `/skill:reverse-skill`、破解 `/skill:crack`、渗透（Claude-Red 的 `offensive-*` skills）。`domain-route` 扩展会强制先读对应 skill；本地样本用 `/ghidra-open <binary>` 再挂 Ghidra MCP。若渗透包被跳过，再跑 `~/oh-my-pi/scripts/hacker/install-claude-red.sh`。更新已有机器：`~/oh-my-pi/scripts/hacker/update.sh`（会 merge 安装包，不覆盖 key）。
 
 然后启动 `omp`，在 TUI 里执行 **`/login beefsms`**，粘贴 beefsms API key。网关地址已经写死为 `http://openai.beefsms.com:38888/v1`，不用填 URL。
 

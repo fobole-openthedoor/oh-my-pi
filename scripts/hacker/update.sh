@@ -65,5 +65,21 @@ bun install
 if [ -x "$ROOT/scripts/link-omp.sh" ]; then
   sh "$ROOT/scripts/link-omp.sh" || true
 fi
+if [ -x "$ROOT/scripts/hacker/install-natives.sh" ]; then
+  sh "$ROOT/scripts/hacker/install-natives.sh" || true
+fi
+
+KIT="$ROOT/scripts/hacker"
+export OMP_FORK_ROOT="$ROOT"
+echo "omp-update: sync kit into ~/.omp/agent"
+sh "$KIT/sync-kit.sh"
+
+CLAUDE_RED_DIR="${CLAUDE_RED_ROOT:-$HOME/tools/claude-red}"
+if [ -d "$CLAUDE_RED_DIR/.git" ] && [ -f "$KIT/install-claude-red.sh" ]; then
+  echo "omp-update: refresh claude-red links"
+  sh "$KIT/install-claude-red.sh" || \
+    echo "omp-update: claude-red refresh failed (non-fatal)" >&2
+fi
+
 echo "omp-update: now $(git log -1 --oneline)"
 echo "omp-update: restart omp to load the new tree"

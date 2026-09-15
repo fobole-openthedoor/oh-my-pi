@@ -20,6 +20,6 @@ Authorized local-sample / lab work only. No live-target ACT without written scop
 5. `ACT`: Open `$REVERSE_SKILL_ROOT/skills/<PRIMARY>/SKILL.md` and follow ACTION REQUIRED.
 6. Tools only from `$REVERSE_SKILL_ROOT/skills/tool-index.md`.
 
-Ghidra: `$GHIDRA_INSTALL_DIR` (`analyzeHeadless`). Prefer the `ghidra` MCP server when connected.
+Ghidra: `$GHIDRA_INSTALL_DIR` (`analyzeHeadless`). Local sample: `/ghidra-open <binary>` or tool `ghidra_open`, then MCP `open_database` with that file_path.
 
 Live web/AD/cloud exploitation → matching `offensive-*` skill. Understanding-only reverse → `/skill:reverse-skill`.

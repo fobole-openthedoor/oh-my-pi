@@ -81,12 +81,35 @@ else
   bad "beefsms-provider.ts missing"
 fi
 
+if [ -f "$AGENT_DIR/extensions/domain-route.ts" ]; then
+  ok "domain-route.ts present"
+else
+  bad "domain-route.ts missing"
+fi
+
+if [ -f "$AGENT_DIR/extensions/ghidra-open.ts" ]; then
+  ok "ghidra-open.ts present"
+else
+  bad "ghidra-open.ts missing"
+fi
+
 if [ -f "$KIT/skills/domain-route.py" ]; then
+  if python3 "$KIT/skills/domain-route.py" --self-test >/dev/null; then
+    ok "domain-route.py self-test"
+  else
+    bad "domain-route.py self-test"
+  fi
   domain="$(python3 "$KIT/skills/domain-route.py" --hint '脱壳去校验' | awk '/^DOMAIN/{print $2}')"
   if [ "$domain" = "crack" ]; then
     ok "domain-route 脱壳 → crack"
   else
     bad "domain-route 脱壳 expected crack, got $domain"
+  fi
+  skip="$(python3 "$KIT/skills/domain-route.py" --json --hint hello | python3 -c 'import json,sys; print(json.load(sys.stdin).get("skip"))')"
+  if [ "$skip" = "True" ]; then
+    ok "domain-route hello → skip"
+  else
+    bad "domain-route hello expected skip, got $skip"
   fi
 else
   bad "domain-route.py missing"

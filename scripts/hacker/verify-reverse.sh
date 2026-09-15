@@ -114,6 +114,53 @@ if have java; then
   esac
 fi
 
+if [ -f "$AGENT_DIR/extensions/domain-route.ts" ]; then
+  ok "domain-route.ts present"
+else
+  bad "domain-route.ts missing"
+fi
+
+if [ -f "$AGENT_DIR/extensions/ghidra-open.ts" ]; then
+  ok "ghidra-open.ts present"
+else
+  bad "ghidra-open.ts missing"
+fi
+
+if python3 "$KIT/skills/domain-route.py" --self-test >/dev/null; then
+  ok "domain-route.py self-test"
+else
+  bad "domain-route.py self-test"
+fi
+
+if python3 "$KIT/merge-config.py" --self-test >/dev/null; then
+  ok "merge-config.py self-test"
+else
+  bad "merge-config.py self-test"
+fi
+
+if [ -x "$KIT/ghidra-open.sh" ] || [ -f "$KIT/ghidra-open.sh" ]; then
+  if sh "$KIT/ghidra-open.sh" --dry-run /bin/true >/dev/null; then
+    ok "ghidra-open.sh --dry-run /bin/true"
+  else
+    bad "ghidra-open.sh --dry-run failed"
+  fi
+else
+  bad "ghidra-open.sh missing"
+fi
+
+if [ -f "$AGENT_DIR/config.yml" ]; then
+  python3 - "$AGENT_DIR/config.yml" <<'PY' || FAIL=1
+import sys, yaml
+data = yaml.safe_load(open(sys.argv[1], encoding="utf-8")) or {}
+comp = data.get("compaction") or {}
+if comp.get("enabled") is True and comp.get("methodOrder") == ["shake"]:
+    print("ok   compaction shake-only")
+else:
+    print("FAIL compaction is not shake-only:", comp)
+    raise SystemExit(1)
+PY
+fi
+
 if [ "$FAIL" -ne 0 ]; then
   echo "omp-reverse: verify failed"
   exit 1

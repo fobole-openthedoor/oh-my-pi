@@ -52,15 +52,23 @@ If `/usr/local/bin` is not writable, the launcher lands in `~/.local/bin`. Put t
 | `~/.omp/agent/config.yml` | roles, yolo, shake-only auto-compact, thinking max |
 | `~/.omp/agent/AGENTS.md` | Work mode: 逆向 / 破解 / 渗透 |
 | `~/.omp/agent/mcp.json` | ghidra stdio MCP |
-| `~/.omp/agent/extensions/` | GLM auto-continue, Kimi K3 thinking rewrite |
+| `~/.omp/agent/extensions/` | GLM auto-continue, Kimi thinking, beefsms `/login`, domain-route, ghidra-open |
 | `$HOME/tools/claude-red` | [Claude-Red](https://github.com/SnailSploit/Claude-Red) pack |
 | `~/.omp/agent/skills/offensive-*` | Each Claude-Red `SKILL.md` linked as a normal omp skill |
 
-Update later:
+Update later (`git pull` the fork, `bun install`, then re-seed extensions / adapters / MCP and merge kit-owned `config.yml` keys; does not overwrite API keys or `models.yml`):
 
 ```sh
 ~/oh-my-pi/scripts/hacker/update.sh
 ```
+
+Local sample in Ghidra (analyzeHeadless into `<dir>/ghidra_projects/<basename>`, then MCP `open_database`):
+
+```
+/ghidra-open /path/to/binary
+```
+
+Domain routing is an extension: it injects `read skill://…` and blocks bash/write/edit until that skill is loaded. `DOMAIN_ROUTE=0` disables; `DOMAIN_ROUTE_GATE=0` injects only.
 
 ## Reverse-engineering stack
 
