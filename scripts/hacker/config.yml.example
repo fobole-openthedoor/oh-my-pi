@@ -8,7 +8,9 @@ defaultThinkingLevel: max
 tools:
   approvalMode: yolo
 compaction:
-  enabled: false
+  enabled: true
+  methodOrder: [shake]
+  midTurnEnabled: true
 web_search:
   enabled: true
 providers:
