@@ -1,0 +1,64 @@
+# beefsms OpenAI-compatible gateway. apiKey is the env var name, not the secret.
+providers:
+  beefsms:
+    baseUrl: http://openai.beefsms.com:38888/v1
+    api: openai-completions
+    apiKey: OPENAI_API_KEY
+    authHeader: true
+    compat:
+      supportsDeveloperRole: false
+      supportsStore: false
+      supportsStrictMode: false
+      supportsUsageInStreaming: true
+      maxTokensField: max_tokens
+      streamIdleTimeoutMs: 300000
+    models:
+      - id: happy/kimi-k3
+        name: Kimi K3
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsDeveloperRole: false
+          supportsReasoningEffort: true
+          supportsStore: false
+          supportsStrictMode: false
+          maxTokensField: max_tokens
+          thinkingFormat: openai
+          streamMarkupHealingPattern: kimi
+      - id: happy/glm-5.3
+        name: GLM-5.3
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: zai
+          requiresReasoningContentForToolCalls: true
+      - id: happy/qwen-3.8-fast
+        name: Qwen 3.8 Fast
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: qwen
+          requiresReasoningContentForToolCalls: true

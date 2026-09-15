@@ -1,0 +1,17 @@
+modelRoles:
+  default: beefsms/happy/kimi-k3
+  slow: beefsms/happy/glm-5.3
+  smol: beefsms/happy/qwen-3.8-fast
+  plan: beefsms/happy/kimi-k3
+  commit: beefsms/happy/qwen-3.8-fast
+defaultThinkingLevel: max
+tools:
+  approvalMode: yolo
+compaction:
+  enabled: false
+web_search:
+  enabled: true
+providers:
+  webSearchOrder:
+    - brave
+    - auto

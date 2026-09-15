@@ -1,0 +1,29 @@
+# omp user memory
+
+## Work mode: 逆向 / 破解 / 渗透
+
+On **every** user task, pick one domain first, then `read skill://<name>` immediately. Do not start acting until a skill is loaded.
+
+If the domain is unclear, run `python3 __OMP_FORK_ROOT__/scripts/hacker/skills/domain-route.py --hint "<user task>"` and follow `NEXT`.
+
+| Domain | User is talking about | Invoke |
+| --- | --- | --- |
+| 逆向 reverse | 反编译, Ghidra, IDA, Frida, APK/SO/ELF/PE, 样本怎么工作 | `skill://reverse-skill` |
+| 破解 crack | 脱壳, 去校验, 补丁, 激活/授权, 加壳, OLLVM, crackme, keygen | `skill://crack` |
+| 渗透 pentest | 打站, SQLi, XSS, 内网, AD, 云, 口令, 打点, 绕过 WAF | matching `skill://offensive-*` |
+
+Do not mix packs on the first turn. Reverse a binary then pentest the service → 逆向/破解 first, 渗透 second. 「破解网站」 is pentest; 「破解软件/授权/壳」 is crack.
+
+Reverse pack: `__REVERSE_SKILL_ROOT__` (`REVERSE_SKILL_ROOT`). Ghidra: `__GHIDRA_HOME__` (`analyzeHeadless`). Prefer the `ghidra` MCP server when connected.
+
+## Claude-Red skills
+
+The Claude-Red pack is installed as normal omp skills (`offensive-sqli`, `offensive-jwt`, `offensive-k8s-attacks`, …). Pack root: `__CLAUDE_RED_ROOT__` (`CLAUDE_RED_ROOT`).
+
+When the domain is **渗透**, `read skill://<matching-offensive-skill>` immediately. `/skill:claude-red` is only a catalog. 逆向 → `/skill:reverse-skill`. 破解 → `/skill:crack`.
+
+## Web search
+
+Do **not** curl `127.0.0.1:8399`, `grok-search`, or `systemctl grok-search`. That service is gone.
+
+For news / current web info, use the built-in **web_search** tool. Use **read** on a URL to fetch a page. Do not invent a local search API.
