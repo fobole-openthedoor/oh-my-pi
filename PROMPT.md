@@ -19,7 +19,7 @@
 - CLI：本 fork 的 `omp`（can1357/oh-my-pi 的 fork），不是 `omp.sh/install` 上游二进制，也不是 `bun i -g @oh-my-pi/pi-coding-agent`。
 - 分支必须是 `main`。上游 can1357/oh-my-pi 没有这套安装脚本。
 - 供应商固定：`OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`，模型 `happy/kimi-k3` / `happy/glm-5.3` / `happy/qwen-3.8-fast`。写进 `~/.omp/agent/models.yml` 的 provider id 是 `beefsms`。
-- Key 只存在 `~/.config/omp/env`，由用户自己填。仓库里只有占位符。`models.yml` 的 apiKey 字段必须是环境变量名 `OPENAI_API_KEY`，不能是真实 key。
+- Key 由用户在 TUI 里 `/login beefsms` 粘贴，存在 omp 的本地 credential store。网关 URL 写死为 `http://openai.beefsms.com:38888/v1`，用户不用填地址。也可以把 key 放进 `~/.config/omp/env` 的 `BEEFSMS_API_KEY`（或 `OPENAI_API_KEY`）。仓库里只有占位符，不要把真实 key 写入 git / models.yml。
 - 逆向：`$HOME/tools/reverse-skill`、`$HOME/tools/ghidra`（12.1.3 PUBLIC）、jadx 1.5.6、`re-mcp-ghidra` stdio MCP。不要装 LaurieWired GhidraMCP，不要改用 HTTP :8765。
 - 工作域三套：逆向 `reverse-skill`（`$HOME/tools/reverse-skill`）、破解 `crack`（同一套 reverse pack，脱壳/去校验/补丁）、渗透 Claude-Red `offensive-*`。`~/.omp/agent/AGENTS.md` 必须有 `Work mode: 逆向 / 破解 / 渗透`，任务一开始先分域再 `read skill://<name>`。
 - 进攻技能包：`$HOME/tools/claude-red`（https://github.com/SnailSploit/Claude-Red）。每个 `Skills/*/*/SKILL.md` **symlink 进** `$HOME/.omp/agent/skills/`。分域脚本：`scripts/hacker/skills/domain-route.py`。
@@ -42,7 +42,7 @@
    - `ln -sfn $HOME/tools/ghidra_12.1.3_PUBLIC $HOME/tools/ghidra`
    - `bash $HOME/tools/reverse-skill/skills/scripts/refresh-tool-index.sh`
    - 用 `scripts/hacker/wire-ghidra-mcp.py` 把 ghidra MCP 写进 `$HOME/.omp/agent/mcp.json`（stdio，`re-mcp-ghidra stdio`，env 里 GHIDRA_INSTALL_DIR / GHIDRA_HOME / JAVA_HOME）。没有这个 py 就手工 merge，不要把 API key 写进 mcp.json。
-6. 编辑 `$HOME/.config/omp/env`：把 `OPENAI_API_KEY` 从 `PASTE_YOUR_BEEFSMS_KEY_HERE` 换成用户的 beefsms key。没有 key 就停在这一步并告诉用户去填，不要编造 key。可选 `BRAVE_API_KEY`。
+6. 启动 `omp` 后让用户执行 `/login beefsms` 并粘贴 key。没有 key 就停在这一步并告诉用户去填，不要编造 key。可选：把 key 写入 `$HOME/.config/omp/env` 的 `BEEFSMS_API_KEY`。可选 `BRAVE_API_KEY`。
 7. 把 `$HOME/.local/bin`、`$HOME/tools/jadx/bin`、`$HOME/tools/ghidra/support`、`$HOME/.bun/bin` 放进 PATH（launch.sh 会 source env）。
 8. 跑 `$HOME/oh-my-pi/scripts/hacker/verify-reverse.sh` 和 `verify-claude-red.sh`。失败就修，再跑直到通过或只剩「用户还没填 key」。
 9. 不要安装 IDA Pro / Burp 正版替代品。不要提交 `~/.config/omp/env` 或把真实 key 写进 `models.yml`。不要配置 Forgejo。不要把 OpenClaude 的 `~/.audncode-platform` 路径当 omp 配置用。
@@ -51,7 +51,7 @@
 
 - omp 启动器路径 / git commit / 分支
 - OPENAI_BASE_URL（应是 beefsms）
-- OPENAI_API_KEY 是否已填（只回答 是/否）
+- `/login beefsms` 是否可用；BEEFSMS_API_KEY / OPENAI_API_KEY 是否已填（只回答 是/否，不要打印 key）
 - java 版本、Ghidra analyzeHeadless、jadx、r2、re-mcp-ghidra
 - reverse-skill 路径、tool-index.md 是否生成
 - AGENTS.md 是否有 Work mode 三域；`/skill:crack` adapter；`domain-route.py --hint 脱壳` → crack；offensive-sqli 是否 symlink

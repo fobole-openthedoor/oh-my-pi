@@ -177,7 +177,7 @@ seed_file "$KIT/skills/crack/SKILL.md" \
 seed_file "$KIT/skills/claude-red/SKILL.md" \
   "$AGENT_DIR/skills/claude-red/SKILL.md"
 
-for ext in glm-auto-continue.ts beefsms-kimi-thinking.ts; do
+for ext in glm-auto-continue.ts beefsms-kimi-thinking.ts beefsms-provider.ts; do
   if [ -f "$KIT/extensions/$ext" ]; then
     install -m 644 "$KIT/extensions/$ext" "$AGENT_DIR/extensions/$ext"
     echo "omp-install: extension → $AGENT_DIR/extensions/$ext"

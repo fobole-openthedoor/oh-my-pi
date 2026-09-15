@@ -2,20 +2,22 @@
 # Fork launcher. Sources a dedicated env file so ~/.bashrc OPENAI_BASE_URL
 # (strix/cige/other agents) does not leak into this CLI.
 ENV_FILE="${OMP_ENV:-$HOME/.config/omp/env}"
-if [ ! -f "$ENV_FILE" ]; then
-  echo "omp: missing $ENV_FILE" >&2
-  echo "omp: copy $HOME/oh-my-pi/scripts/hacker/env.example and set OPENAI_API_KEY" >&2
-  exit 1
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
 fi
-set -a
-# shellcheck disable=SC1090
-. "$ENV_FILE"
-set +a
 
+# Placeholder is not a real key. Leave unset so /login beefsms can store one.
 case "${OPENAI_API_KEY:-}" in
   ""|"PASTE_YOUR_BEEFSMS_KEY_HERE"|*"set in ~/.config/omp/env"*)
-    echo "omp: set OPENAI_API_KEY in $ENV_FILE (beefsms key, not committed)" >&2
-    exit 1
+    unset OPENAI_API_KEY
+    ;;
+esac
+case "${BEEFSMS_API_KEY:-}" in
+  ""|"PASTE_YOUR_BEEFSMS_KEY_HERE")
+    unset BEEFSMS_API_KEY
     ;;
 esac
 

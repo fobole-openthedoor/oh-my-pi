@@ -15,12 +15,15 @@ curl -fsSL https://raw.githubusercontent.com/fobole-openthedoor/oh-my-pi/main/sc
 
 `install.sh` 会装三套工作域：逆向 `/skill:reverse-skill`、破解 `/skill:crack`、渗透（Claude-Red 的 `offensive-*` skills）。`~/.omp/agent/AGENTS.md` 负责先分域再读 skill。若渗透包被跳过，再跑 `~/oh-my-pi/scripts/hacker/install-claude-red.sh`。
 
-然后编辑 `~/.config/omp/env`，把 `OPENAI_API_KEY` 换成自己的 beefsms key。可选 `BRAVE_API_KEY`。
+然后启动 `omp`，在 TUI 里执行 **`/login beefsms`**，粘贴 beefsms API key。网关地址已经写死为 `http://openai.beefsms.com:38888/v1`，不用填 URL。
+
+也可以把 key 写进 `~/.config/omp/env` 的 `BEEFSMS_API_KEY` 或 `OPENAI_API_KEY`（不进 git）。可选 `BRAVE_API_KEY`。
 
 ```sh
 ~/oh-my-pi/scripts/hacker/verify-reverse.sh
 ~/oh-my-pi/scripts/hacker/verify-claude-red.sh
 omp
+# 然后: /login beefsms
 ```
 
 `install-reverse.sh` 会下 Ghidra 12.1.3（约 570MB）。已经有 Ghidra 就加 `--skip-ghidra`。磁盘不够就先跳过，CLI 也能用。

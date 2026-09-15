@@ -1,9 +1,11 @@
-# beefsms OpenAI-compatible gateway. apiKey is the env var name, not the secret.
+# beefsms OpenAI-compatible gateway.
+# Preferred: /login beefsms (paste key; URL is already set).
+# Fallback env: BEEFSMS_API_KEY or OPENAI_API_KEY. Do not put the secret here.
 providers:
   beefsms:
     baseUrl: http://openai.beefsms.com:38888/v1
     api: openai-completions
-    apiKey: OPENAI_API_KEY
+    auth: oauth
     authHeader: true
     compat:
       supportsDeveloperRole: false

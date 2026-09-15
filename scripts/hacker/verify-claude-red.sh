@@ -75,6 +75,12 @@ else
   bad "beefsms-kimi-thinking.ts missing"
 fi
 
+if [ -f "$AGENT_DIR/extensions/beefsms-provider.ts" ]; then
+  ok "beefsms-provider.ts present"
+else
+  bad "beefsms-provider.ts missing"
+fi
+
 if [ -f "$KIT/skills/domain-route.py" ]; then
   domain="$(python3 "$KIT/skills/domain-route.py" --hint '脱壳去校验' | awk '/^DOMAIN/{print $2}')"
   if [ "$domain" = "crack" ]; then

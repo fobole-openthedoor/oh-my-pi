@@ -27,19 +27,16 @@ git clone https://github.com/fobole-openthedoor/oh-my-pi.git ~/oh-my-pi
 
 `install.sh` writes `~/.config/omp/env` from `env.example` and does **not** put secrets in git.
 
-```sh
-$EDITOR ~/.config/omp/env
-```
+Start `omp`, then **`/login beefsms`** and paste the API key. The base URL is already `http://openai.beefsms.com:38888/v1`.
 
-Set:
+Optional env (instead of `/login`):
 
-- `OPENAI_API_KEY` — beefsms key (required)
-- `BRAVE_API_KEY` — optional, for web_search
-
-Then:
+- `BEEFSMS_API_KEY` or `OPENAI_API_KEY` in `~/.config/omp/env`
+- `BRAVE_API_KEY` — web_search
 
 ```sh
 omp
+# /login beefsms
 ```
 
 If `/usr/local/bin` is not writable, the launcher lands in `~/.local/bin`. Put that on `PATH`.
