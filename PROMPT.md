@@ -1,6 +1,6 @@
 # 给别人的 AI：复刻这套 oh-my-pi + 逆向环境
 
-把 **「从这里复制」到「复制结束」** 整段原样发给任意能跑终端的 AI（oh-my-pi / Claude Code / Codex / Cursor 都行）。人只需要事后在 `~/.config/omp/env` 里填自己的 beefsms key。
+把 **「从这里复制」到「复制结束」** 整段原样发给任意能跑终端的 AI（oh-my-pi / Claude Code / Codex / Cursor 都行）。同一段也在仓库根目录 **[README.md](README.md) 最顶部**，只丢仓库链接时 AI 应先读那里。人只需要事后在 `~/.config/omp/env` 里填自己的 beefsms key。
 
 仓库：https://github.com/fobole-openthedoor/oh-my-pi
 人看的安装说明：**[INSTALL.md](INSTALL.md)**（仓库根目录，打开就能看到）。
@@ -24,7 +24,7 @@
 - 工作域三套：逆向 `reverse-skill`（`$HOME/tools/reverse-skill`）、破解 `crack`（同一套 reverse pack，脱壳/去校验/补丁）、渗透 Claude-Red `offensive-*`。`~/.omp/agent/AGENTS.md` 必须有 `Work mode: 逆向 / 破解 / 渗透`，任务一开始先分域再 `read skill://<name>`。
 - 进攻技能包：`$HOME/tools/claude-red`（https://github.com/SnailSploit/Claude-Red）。每个 `Skills/*/*/SKILL.md` **symlink 进** `$HOME/.omp/agent/skills/`。分域脚本：`scripts/hacker/skills/domain-route.py`。
 - Ghidra MCP 写进 `$HOME/.omp/agent/mcp.json`（stdio，`re-mcp-ghidra stdio`，env 里 GHIDRA_INSTALL_DIR / GHIDRA_HOME / JAVA_HOME）。
-- GLM 自动续跑：`~/.omp/agent/extensions/glm-auto-continue.ts`。Kimi K3 thinking 改写：`~/.omp/agent/extensions/beefsms-kimi-thinking.ts`。分域闸：`domain-route.ts`（没读 skill 前挡住 bash/write/edit）。Ghidra 导入：`ghidra-open.ts` + `scripts/hacker/ghidra-open.sh`（`/ghidra-open <binary>` → MCP `open_database`）。
+- GLM 自动续跑：`~/.omp/agent/extensions/glm-auto-continue.ts`。Kimi K3 thinking 改写：`~/.omp/agent/extensions/beefsms-kimi-thinking.ts`。分域闸：`domain-route.ts`（没读 skill 前挡住 bash/write/edit）。Ghidra 导入：`ghidra-open.ts` + `scripts/hacker/ghidra-open.sh`（`/ghidra-open <binary>` → MCP `open_database`）。丢掉崩掉的思考：`drop-degenerate-thinking.ts` + `~/.omp/agent/rules/no-telegraph.md`。
 
 ## 步骤
 

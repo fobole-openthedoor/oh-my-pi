@@ -1,6 +1,8 @@
 # oh-my-pi replica (this fork)
 
-**人先看仓库根目录 [INSTALL.md](../../INSTALL.md)。给 AI 的提示词在根目录 [PROMPT.md](../../PROMPT.md)。**
+**AI：不要 `curl https://omp.sh/install`。读仓库根目录 [README.md](../../README.md) 顶部和 [PROMPT.md](../../PROMPT.md)，跑本目录 `install.sh` + `install-reverse.sh`。**
+
+**人先看仓库根目录 [INSTALL.md](../../INSTALL.md)。给 AI 的提示词在根目录 [PROMPT.md](../../PROMPT.md)（与 README 顶部同一段）。**
 
 This directory is the install kit: can1357/oh-my-pi plus beefsms OpenAI-compat provider, reverse / crack / pentest skills, Ghidra MCP, and the local launchers.
 

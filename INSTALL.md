@@ -30,6 +30,6 @@ omp
 
 ## AI：把提示词整段贴过去
 
-打开仓库根目录的 **[PROMPT.md](PROMPT.md)**，把「从这里复制」到「复制结束」发给任意能跑终端的 AI。人只负责事后填 key。
+打开仓库根目录 **[README.md](README.md) 顶部** 或 **[PROMPT.md](PROMPT.md)**（两段相同），把「从这里复制」到「复制结束」发给任意能跑终端的 AI。只丢 GitHub 链接时，AI 应先读 README 顶部，不要跑下面上游的 `omp.sh/install`。人只负责事后填 key。
 
 细节、版本钉死、脚本清单：`scripts/hacker/README.md`。
