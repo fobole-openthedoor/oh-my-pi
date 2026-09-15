@@ -30,7 +30,7 @@ KIT_OWNED = {
         "repeatGap": 2,
     },
     "modelRoles": {
-        "vision": "beefsms/deepseek-flash",
+        "vision": "beefsms/deepseek-flash:low",
     },
     "modelProviderOrder": ["beefsms"],
 }
@@ -114,8 +114,8 @@ def self_test() -> int:
         if data.get("modelRoles", {}).get("default") != "keep-me":
             print("FAIL user modelRoles overwritten", file=sys.stderr)
             return 1
-        if data.get("modelRoles", {}).get("vision") != "beefsms/deepseek-flash":
-            print("FAIL modelRoles.vision not beefsms/deepseek-flash", file=sys.stderr)
+        if data.get("modelRoles", {}).get("vision") != "beefsms/deepseek-flash:low":
+            print("FAIL modelRoles.vision not beefsms/deepseek-flash:low", file=sys.stderr)
             return 1
         if data.get("modelProviderOrder") != ["beefsms"]:
             print(f"FAIL modelProviderOrder {data.get('modelProviderOrder')}", file=sys.stderr)

@@ -16,7 +16,7 @@
 ## 目标终态（按路径验收，脚本叫什么就装什么）
 
 - CLI：本 fork 的 `omp`，分支 `main`。
-- 供应商：`OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`，provider id `beefsms`，`modelProviderOrder: [beefsms]`。模型 `happy/kimi-k3` / `happy/glm-5.3` / `happy/glm-5.3-plus` / `happy/qwen-3.8-fast` / `deepseek-flash`。`modelRoles.vision` 必须是 `beefsms/deepseek-flash`。
+- 供应商：`OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`，provider id `beefsms`，`modelProviderOrder: [beefsms]`。模型 `happy/kimi-k3` / `happy/glm-5.3` / `happy/glm-5.3-plus` / `happy/qwen-3.8-fast` / `deepseek-flash`。`modelRoles.vision` 必须是 `beefsms/deepseek-flash:low`。
 - Key：TUI 里 `/login beefsms`。也可写 `~/.config/omp/env` 的 `BEEFSMS_API_KEY` 或 `OPENAI_API_KEY`。仓库只有占位符。
 - 必须跑完：`scripts/hacker/install.sh`、`install-claude-red.sh`（若 install.sh 跳过了）、`install-reverse.sh`。
 - 装完应存在：`$HOME/tools/claude-red` 且 `offensive-*` symlink 进 `$HOME/.omp/agent/skills/`；`$HOME/tools/reverse-skill`；`$HOME/tools/ghidra`（12.1.3 PUBLIC，`analyzeHeadless`）；jadx 1.5.6；`re-mcp-ghidra` stdio；`~/.omp/agent/skills/{reverse-skill,crack,claude-red}/SKILL.md`；extensions：`glm-auto-continue.ts`、`beefsms-kimi-thinking.ts`、`beefsms-provider.ts`、`domain-route.ts`、`ghidra-open.ts`、`drop-degenerate-thinking.ts`；`~/.omp/agent/rules/no-telegraph.md`。

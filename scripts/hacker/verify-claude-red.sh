@@ -91,10 +91,10 @@ else
   bad "beefsms-provider.ts missing"
 fi
 
-if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq 'vision:[[:space:]]*beefsms/deepseek-flash' "$AGENT_DIR/config.yml"; then
-  ok "modelRoles.vision → beefsms/deepseek-flash"
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq "vision:[[:space:]]*['\"]?beefsms/deepseek-flash:low" "$AGENT_DIR/config.yml"; then
+  ok "modelRoles.vision → beefsms/deepseek-flash:low"
 else
-  bad "config.yml vision role is not beefsms/deepseek-flash"
+  bad "config.yml vision role is not beefsms/deepseek-flash:low"
 fi
 
 if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq '(^|[[:space:]])beefsms[[:space:]]*$' "$AGENT_DIR/config.yml" && grep -q 'modelProviderOrder' "$AGENT_DIR/config.yml"; then

@@ -4,7 +4,7 @@ modelRoles:
   smol: beefsms/happy/qwen-3.8-fast
   plan: beefsms/happy/kimi-k3
   commit: beefsms/happy/qwen-3.8-fast
-  vision: beefsms/deepseek-flash
+  vision: beefsms/deepseek-flash:low
 modelProviderOrder:
   - beefsms
 defaultThinkingLevel: max
