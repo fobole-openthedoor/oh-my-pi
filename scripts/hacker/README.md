@@ -70,6 +70,8 @@ Local sample in Ghidra (analyzeHeadless into `<dir>/ghidra_projects/<basename>`,
 
 Domain routing is an extension: it injects `read skill://…` and blocks bash/write/edit until that skill is loaded. `DOMAIN_ROUTE=0` disables; `DOMAIN_ROUTE_GATE=0` injects only.
 
+Thinking collapse (ALL CAPS / one word per line / emoji): TTSR rule `no-telegraph` aborts the stream and retries; `drop-degenerate-thinking` deletes already-collapsed `reasoning_content` so it is not replayed. `DROP_DEGENERATE_THINKING=0` disables the drop.
+
 ## Reverse-engineering stack
 
 Ghidra is ~570MB, so it is **not** in the default bootstrap. Two ways:

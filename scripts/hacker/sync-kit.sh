@@ -65,6 +65,7 @@ pick_launcher_dir() {
 mkdir -p "$AGENT_DIR/skills" "$AGENT_DIR/extensions" "$(dirname "$ENV_FILE")"
 ensure_env DOMAIN_ROUTE "${DOMAIN_ROUTE:-1}"
 ensure_env DOMAIN_ROUTE_GATE "${DOMAIN_ROUTE_GATE:-1}"
+ensure_env DROP_DEGENERATE_THINKING "${DROP_DEGENERATE_THINKING:-1}"
 
 seed_if_missing "$KIT/models.yml.example" "$AGENT_DIR/models.yml"
 seed_if_missing "$KIT/mcp.json.example" "$AGENT_DIR/mcp.json"
@@ -78,6 +79,14 @@ for ext in "$KIT/extensions"/*.ts; do
   base="$(basename "$ext")"
   install -m 644 "$ext" "$AGENT_DIR/extensions/$base"
   log "extension → $AGENT_DIR/extensions/$base"
+done
+
+mkdir -p "$AGENT_DIR/rules"
+for rule in "$KIT/rules"/*.md; do
+  [ -f "$rule" ] || continue
+  base="$(basename "$rule")"
+  install -m 644 "$rule" "$AGENT_DIR/rules/$base"
+  log "rule → $AGENT_DIR/rules/$base"
 done
 
 for adapter in reverse-skill crack claude-red; do

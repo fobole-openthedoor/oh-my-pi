@@ -126,6 +126,18 @@ else
   bad "ghidra-open.ts missing"
 fi
 
+if [ -f "$AGENT_DIR/extensions/drop-degenerate-thinking.ts" ]; then
+  ok "drop-degenerate-thinking.ts present"
+else
+  bad "drop-degenerate-thinking.ts missing"
+fi
+
+if [ -f "$AGENT_DIR/rules/no-telegraph.md" ]; then
+  ok "rule no-telegraph present"
+else
+  bad "rule no-telegraph missing"
+fi
+
 if python3 "$KIT/skills/domain-route.py" --self-test >/dev/null; then
   ok "domain-route.py self-test"
 else
@@ -158,7 +170,45 @@ if comp.get("enabled") is True and comp.get("methodOrder") == ["shake"]:
 else:
     print("FAIL compaction is not shake-only:", comp)
     raise SystemExit(1)
+ttsr = data.get("ttsr") or {}
+if ttsr.get("repeatMode") == "after-gap" and ttsr.get("repeatGap") == 2:
+    print("ok   ttsr after-gap/2")
+else:
+    print("FAIL ttsr:", ttsr)
+    raise SystemExit(1)
 PY
+fi
+
+if command -v bun >/dev/null 2>&1; then
+  if bun -e '
+    import { isDegenerateThinking, dropDegenerateFromPayload } from "'"$KIT"'/extensions/drop-degenerate-thinking.ts";
+    const caps = Array(10).fill("YES").join("\n") + "\nWAIT\nDONE\n";
+    if (!isDegenerateThinking(caps)) throw new Error("caps salad should be degenerate");
+    const prose = "The license check is in sub_401000. I will open Ghidra next and dump the function.";
+    if (isDegenerateThinking(prose)) throw new Error("normal prose should pass");
+    const payload = dropDegenerateFromPayload({
+      messages: [
+        { role: "assistant", reasoning_content: caps, content: "next I will read the skill" },
+        { role: "user", content: "go" },
+      ],
+    });
+    if (payload.messages?.[0]?.reasoning_content) throw new Error("degenerate reasoning should be dropped");
+    if (payload.messages?.[0]?.content !== "next I will read the skill") throw new Error("visible content must stay");
+    const patterns = [
+      "(?m)(?:^[A-Z]{2,24}[.!?]{0,3}\\r?\\n){8,}",
+      "(?m)(?:^[A-Z]{2,16}\\s*[🔥💥✅❌🎯🚀⚠️❗💯✨🎉]?\\s*\\r?\\n){6,}",
+    ];
+    for (const p of patterns) {
+      const flags = p.startsWith("(?m)") ? "m" : "";
+      const body = p.startsWith("(?m)") ? p.slice(4) : p;
+      if (!new RegExp(body, flags).test(caps + "\n")) throw new Error("ttsr pattern missed caps: " + p);
+    }
+    console.log("ok");
+  ' >/dev/null; then
+    ok "drop-degenerate-thinking classifier"
+  else
+    bad "drop-degenerate-thinking classifier"
+  fi
 fi
 
 if [ "$FAIL" -ne 0 ]; then

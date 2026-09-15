@@ -93,6 +93,12 @@ else
   bad "ghidra-open.ts missing"
 fi
 
+if [ -f "$AGENT_DIR/extensions/drop-degenerate-thinking.ts" ]; then
+  ok "drop-degenerate-thinking.ts present"
+else
+  bad "drop-degenerate-thinking.ts missing"
+fi
+
 if [ -f "$KIT/skills/domain-route.py" ]; then
   if python3 "$KIT/skills/domain-route.py" --self-test >/dev/null; then
     ok "domain-route.py self-test"

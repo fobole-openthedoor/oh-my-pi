@@ -37,7 +37,8 @@ function rewriteKimiPayload(payload: ChatPayload, effort: string): ChatPayload {
 
 		// Official K3: replay real reasoning_content as-is. Never invent an
 		// empty string — that locks this relay into a no-think prefix for the
-		// rest of the tool loop.
+		// rest of the tool loop. Collapsed caps/emoji thinking is stripped by
+		// drop-degenerate-thinking.ts (runs after this rewrite).
 		if (message.reasoning_content === "" || message.reasoning_content == null) {
 			delete message.reasoning_content;
 		}

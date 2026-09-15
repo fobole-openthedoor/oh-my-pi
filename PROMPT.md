@@ -56,7 +56,8 @@
 - reverse-skill 路径、tool-index.md 是否生成
 - AGENTS.md 是否有 Work mode 三域；`/skill:crack` adapter；`domain-route.py --hint 脱壳` → crack；offensive-sqli 是否 symlink
 - mcp.json 里 ghidra 是否 stdio
-- glm-auto-continue.ts / beefsms-kimi-thinking.ts / domain-route.ts / ghidra-open.ts 是否在 ~/.omp/agent/extensions/
+- glm-auto-continue.ts / beefsms-kimi-thinking.ts / domain-route.ts / ghidra-open.ts / drop-degenerate-thinking.ts 是否在 ~/.omp/agent/extensions/
+- `~/.omp/agent/rules/no-telegraph.md` 是否存在
 - `domain-route.py --self-test`、`ghidra-open.sh --dry-run` 是否通过
 - verify-reverse.sh / verify-claude-red.sh 退出码
 ```

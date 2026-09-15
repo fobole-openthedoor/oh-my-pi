@@ -19,3 +19,6 @@ providers:
     - auto
 statusLine:
   contextLine: percentage
+ttsr:
+  repeatMode: after-gap
+  repeatGap: 2

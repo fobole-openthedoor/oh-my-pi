@@ -25,6 +25,10 @@ KIT_OWNED = {
     "statusLine": {
         "contextLine": "percentage",
     },
+    "ttsr": {
+        "repeatMode": "after-gap",
+        "repeatGap": 2,
+    },
 }
 
 
@@ -118,6 +122,10 @@ def self_test() -> int:
             return 1
         if (data.get("statusLine") or {}).get("contextLine") != "percentage":
             print("FAIL statusLine.contextLine missing", file=sys.stderr)
+            return 1
+        ttsr = data.get("ttsr") or {}
+        if ttsr.get("repeatMode") != "after-gap" or ttsr.get("repeatGap") != 2:
+            print(f"FAIL ttsr {ttsr}", file=sys.stderr)
             return 1
         again = merge_file(path, None)
         if again != "unchanged":
