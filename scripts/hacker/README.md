@@ -6,7 +6,7 @@
 
 This directory is the install kit: can1357/oh-my-pi plus beefsms OpenAI-compat provider, reverse / crack / pentest skills, Ghidra MCP, and the local launchers.
 
-Provider is the same for everyone: `http://openai.beefsms.com:38888/v1` (`happy/kimi-k3`, `happy/glm-5.3`, `happy/qwen-3.8-fast`, `deepseek-flash`). `modelRoles.vision` is `beefsms/deepseek-flash`. Keys stay on the machine that runs the CLI.
+Provider is the same for everyone: `http://openai.beefsms.com:38888/v1` (`happy/kimi-k3`, `happy/glm-5.3`, `happy/glm-5.3-plus`, `happy/qwen-3.8-fast`, `deepseek-flash`). `modelRoles.vision` is `beefsms/deepseek-flash`. Keys stay on the machine that runs the CLI.
 
 ## One command
 

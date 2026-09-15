@@ -5,6 +5,29 @@ const PROVIDER = "beefsms";
 
 const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
+const GLM_COMPAT = {
+	supportsReasoningEffort: true,
+	thinkingFormat: "zai" as const,
+	requiresReasoningContentForToolCalls: true,
+};
+
+function textModel(
+	id: string,
+	name: string,
+	compat: NonNullable<ProviderModelConfig["compat"]>,
+): ProviderModelConfig {
+	return {
+		id,
+		name,
+		reasoning: true,
+		input: ["text"],
+		contextWindow: 1_048_576,
+		maxTokens: 131_072,
+		cost: ZERO_COST,
+		compat,
+	};
+}
+
 const MODELS: ProviderModelConfig[] = [
 	{
 		id: "happy/kimi-k3",
@@ -24,34 +47,13 @@ const MODELS: ProviderModelConfig[] = [
 			streamMarkupHealingPattern: "kimi",
 		},
 	},
-	{
-		id: "happy/glm-5.3",
-		name: "GLM-5.3",
-		reasoning: true,
-		input: ["text"],
-		contextWindow: 1_048_576,
-		maxTokens: 131_072,
-		cost: ZERO_COST,
-		compat: {
-			supportsReasoningEffort: true,
-			thinkingFormat: "zai",
-			requiresReasoningContentForToolCalls: true,
-		},
-	},
-	{
-		id: "happy/qwen-3.8-fast",
-		name: "Qwen 3.8 Fast",
-		reasoning: true,
-		input: ["text"],
-		contextWindow: 1_048_576,
-		maxTokens: 131_072,
-		cost: ZERO_COST,
-		compat: {
-			supportsReasoningEffort: true,
-			thinkingFormat: "qwen",
-			requiresReasoningContentForToolCalls: true,
-		},
-	},
+	textModel("happy/glm-5.3", "GLM-5.3", GLM_COMPAT),
+	textModel("happy/glm-5.3-plus", "GLM-5.3 Plus", GLM_COMPAT),
+	textModel("happy/qwen-3.8-fast", "Qwen 3.8 Fast", {
+		supportsReasoningEffort: true,
+		thinkingFormat: "qwen",
+		requiresReasoningContentForToolCalls: true,
+	}),
 	{
 		id: "deepseek-flash",
 		name: "DeepSeek Flash",
@@ -75,11 +77,61 @@ const MODELS: ProviderModelConfig[] = [
 	},
 ];
 
-function stripKey(raw: string): string {
-	return raw.trim().replace(/^bearer\b\s*/i, "").trim();
+const MODELS_BY_ID = new Map(MODELS.map((model) => [model.id, model]));
+
+function guessUnknownModel(id: string): ProviderModelConfig {
+	const lower = id.toLowerCase();
+	if (lower.includes("glm")) return textModel(id, id, GLM_COMPAT);
+	if (lower.includes("qwen")) {
+		return textModel(id, id, {
+			supportsReasoningEffort: true,
+			thinkingFormat: "qwen",
+			requiresReasoningContentForToolCalls: true,
+		});
+	}
+	if (lower.includes("kimi")) {
+		return textModel(id, id, {
+			supportsDeveloperRole: false,
+			supportsReasoningEffort: true,
+			supportsStore: false,
+			supportsStrictMode: false,
+			maxTokensField: "max_tokens",
+			thinkingFormat: "openai",
+			streamMarkupHealingPattern: "kimi",
+		});
+	}
+	if (lower.includes("deepseek")) {
+		const flash = MODELS_BY_ID.get("deepseek-flash");
+		if (flash) return { ...flash, id, name: id };
+	}
+	return textModel(id, id, {
+		supportsReasoningEffort: true,
+		thinkingFormat: "openai",
+	});
 }
 
-async function validateKey(apiKey: string, signal?: AbortSignal): Promise<void> {
+function modelForId(id: string): ProviderModelConfig {
+	return MODELS_BY_ID.get(id) ?? guessUnknownModel(id);
+}
+
+function parseModelIds(payload: unknown): string[] {
+	const rows = Array.isArray(payload)
+		? payload
+		: payload && typeof payload === "object" && "data" in payload && Array.isArray((payload as { data: unknown }).data)
+			? (payload as { data: unknown[] }).data
+			: [];
+	const ids: string[] = [];
+	for (const row of rows) {
+		if (typeof row === "string" && row) ids.push(row);
+		else if (row && typeof row === "object" && typeof (row as { id?: unknown }).id === "string") {
+			const id = (row as { id: string }).id.trim();
+			if (id) ids.push(id);
+		}
+	}
+	return ids;
+}
+
+async function listGatewayIds(apiKey: string, signal?: AbortSignal): Promise<string[]> {
 	const response = await fetch(`${BASE_URL}/models`, {
 		headers: { Authorization: `Bearer ${apiKey}` },
 		signal,
@@ -93,6 +145,35 @@ async function validateKey(apiKey: string, signal?: AbortSignal): Promise<void> 
 			`beefsms key check failed (HTTP ${response.status})${body ? `: ${body.slice(0, 200)}` : ""}`,
 		);
 	}
+	return parseModelIds(await response.json());
+}
+
+function modelsFromIds(ids: string[]): ProviderModelConfig[] {
+	const seen = new Set<string>();
+	const models: ProviderModelConfig[] = [];
+	for (const id of ids) {
+		if (seen.has(id)) continue;
+		seen.add(id);
+		models.push(modelForId(id));
+	}
+	for (const model of MODELS) {
+		if (seen.has(model.id)) continue;
+		models.push(model);
+	}
+	return models.length > 0 ? models : [...MODELS];
+}
+
+async function fetchLiveModels(apiKey: string | undefined): Promise<ProviderModelConfig[]> {
+	if (!apiKey) return [...MODELS];
+	try {
+		return modelsFromIds(await listGatewayIds(apiKey));
+	} catch {
+		return [...MODELS];
+	}
+}
+
+function stripKey(raw: string): string {
+	return raw.trim().replace(/^bearer\b\s*/i, "").trim();
 }
 
 export default function (pi: ExtensionAPI) {
@@ -101,6 +182,7 @@ export default function (pi: ExtensionAPI) {
 		api: "openai-completions",
 		authHeader: true,
 		models: MODELS,
+		fetchDynamicModels: (apiKey) => fetchLiveModels(apiKey),
 		oauth: {
 			name: "beefsms",
 			async login(callbacks) {
@@ -121,7 +203,7 @@ export default function (pi: ExtensionAPI) {
 					throw new Error("API key is empty");
 				}
 				callbacks.onProgress?.("Checking key against beefsms /v1/models…");
-				await validateKey(key, callbacks.signal);
+				await listGatewayIds(key, callbacks.signal);
 				return key;
 			},
 		},

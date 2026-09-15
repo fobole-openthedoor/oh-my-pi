@@ -49,6 +49,21 @@ providers:
           supportsReasoningEffort: true
           thinkingFormat: zai
           requiresReasoningContentForToolCalls: true
+      - id: happy/glm-5.3-plus
+        name: GLM-5.3 Plus
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: zai
+          requiresReasoningContentForToolCalls: true
       - id: happy/qwen-3.8-fast
         name: Qwen 3.8 Fast
         reasoning: true

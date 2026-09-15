@@ -82,6 +82,11 @@ if [ -f "$AGENT_DIR/extensions/beefsms-provider.ts" ]; then
   else
     bad "beefsms-provider.ts missing deepseek-flash"
   fi
+  if grep -q 'happy/glm-5.3-plus' "$AGENT_DIR/extensions/beefsms-provider.ts"; then
+    ok "beefsms model happy/glm-5.3-plus"
+  else
+    bad "beefsms-provider.ts missing happy/glm-5.3-plus"
+  fi
 else
   bad "beefsms-provider.ts missing"
 fi
