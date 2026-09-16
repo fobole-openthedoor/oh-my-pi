@@ -1,7 +1,7 @@
 #!/bin/sh
 # Re-seed this fork's kit into ~/.omp/agent.
-# Overwrites extensions and skill adapters. Merges config.yml (kit-owned keys).
-# Does not overwrite API keys, ~/.config/omp/env values, or models.yml.
+# Overwrites extensions and skill adapters. Merges config.yml (kit-owned keys)
+# and beefsms compactionModel. Does not overwrite API keys or ~/.config/omp/env.
 set -eu
 
 KIT="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"

@@ -109,6 +109,24 @@ else
   bad "config.yml smol role is not beefsms/deepseek-flash"
 fi
 
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq "compact:[[:space:]]*['\"]?beefsms/deepseek-flash(['\"]|$)" "$AGENT_DIR/config.yml"; then
+  ok "modelRoles.compact → beefsms/deepseek-flash"
+else
+  bad "config.yml compact role is not beefsms/deepseek-flash"
+fi
+
+if [ -f "$AGENT_DIR/models.yml" ] && grep -q 'compactionModel: beefsms/deepseek-flash' "$AGENT_DIR/models.yml"; then
+  ok "models.yml compactionModel → beefsms/deepseek-flash"
+else
+  bad "models.yml missing compactionModel beefsms/deepseek-flash"
+fi
+
+if [ -f "$AGENT_DIR/extensions/beefsms-provider.ts" ] && grep -q 'beefsms/deepseek-flash' "$AGENT_DIR/extensions/beefsms-provider.ts" && grep -q 'compactionModel' "$AGENT_DIR/extensions/beefsms-provider.ts"; then
+  ok "beefsms-provider.ts compactionModel → beefsms/deepseek-flash"
+else
+  bad "beefsms-provider.ts missing compactionModel"
+fi
+
 if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq '^[[:space:]]*slow:' "$AGENT_DIR/config.yml"; then
   bad "config.yml still presets modelRoles.slow"
 else

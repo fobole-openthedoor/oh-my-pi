@@ -32,6 +32,7 @@ KIT_OWNED = {
     "modelRoles": {
         "default": "beefsms/happy/glm-5.3-plus",
         "smol": "beefsms/deepseek-flash",
+        "compact": "beefsms/deepseek-flash",
         "vision": "beefsms/deepseek-flash:low",
     },
     "modelProviderOrder": ["beefsms"],
@@ -39,6 +40,8 @@ KIT_OWNED = {
 
 # Roles the kit must not preset. Dropped on merge even if the user file has them.
 KIT_DROP_ROLES = ("slow",)
+
+COMPACTION_MODEL = "beefsms/deepseek-flash"
 
 
 def deep_merge_owned(user: dict, owned: dict) -> dict:
@@ -70,6 +73,41 @@ def drop_kit_roles(data: dict) -> dict:
 
 def apply_kit_policy(user: dict) -> dict:
     return drop_kit_roles(deep_merge_owned(user, KIT_OWNED))
+
+
+def apply_compaction_model(data: dict) -> dict:
+    """Point beefsms models at the compact role's model. Never touches apiKey."""
+    providers = data.get("providers")
+    if not isinstance(providers, dict):
+        return data
+    beefsms = providers.get("beefsms")
+    if not isinstance(beefsms, dict):
+        return data
+    models = beefsms.get("models")
+    if not isinstance(models, list):
+        return data
+    next_models = []
+    changed = False
+    for model in models:
+        if not isinstance(model, dict):
+            next_models.append(model)
+            continue
+        if model.get("compactionModel") == COMPACTION_MODEL:
+            next_models.append(model)
+            continue
+        patched = dict(model)
+        patched["compactionModel"] = COMPACTION_MODEL
+        next_models.append(patched)
+        changed = True
+    if not changed:
+        return data
+    next_provider = dict(beefsms)
+    next_provider["models"] = next_models
+    next_providers = dict(providers)
+    next_providers["beefsms"] = next_provider
+    out = dict(data)
+    out["providers"] = next_providers
+    return out
 
 
 def load_yaml(path: Path) -> dict:
@@ -122,6 +160,31 @@ def merge_file(path: Path, example: Path | None) -> str:
     return "merged"
 
 
+def merge_models_file(path: Path) -> str:
+    if not path.is_file():
+        return "missing"
+    user = load_yaml(path)
+    merged = apply_compaction_model(user)
+    if merged == user:
+        return "unchanged"
+    text = dump_yaml(merged)
+    fd, tmp = tempfile.mkstemp(prefix="omp-models-", suffix=".yml", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            if not text.endswith("\n"):
+                handle.write("\n")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    return "merged"
+
+
 def self_test() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yml"
@@ -145,6 +208,9 @@ def self_test() -> int:
             return 1
         if data.get("modelRoles", {}).get("smol") != "beefsms/deepseek-flash":
             print("FAIL modelRoles.smol not beefsms/deepseek-flash", file=sys.stderr)
+            return 1
+        if data.get("modelRoles", {}).get("compact") != "beefsms/deepseek-flash":
+            print("FAIL modelRoles.compact not beefsms/deepseek-flash", file=sys.stderr)
             return 1
         if "slow" in (data.get("modelRoles") or {}):
             print("FAIL modelRoles.slow was preset", file=sys.stderr)
@@ -173,6 +239,31 @@ def self_test() -> int:
         if again != "unchanged":
             print(f"FAIL second merge not idempotent: {again}", file=sys.stderr)
             return 1
+        models_path = Path(tmp) / "models.yml"
+        models_path.write_text(
+            "providers:\n  beefsms:\n    apiKey: KEEP_ME\n    models:\n      - id: happy/glm-5.3-plus\n        name: GLM\n      - id: deepseek-flash\n        compactionModel: beefsms/deepseek-flash\n",
+            encoding="utf-8",
+        )
+        models_status = merge_models_file(models_path)
+        if models_status != "merged":
+            print(f"FAIL expected models merged, got {models_status}", file=sys.stderr)
+            return 1
+        models = load_yaml(models_path)
+        beefsms = (models.get("providers") or {}).get("beefsms") or {}
+        if beefsms.get("apiKey") != "KEEP_ME":
+            print("FAIL models.yml apiKey overwritten", file=sys.stderr)
+            return 1
+        ids = {row.get("id"): row for row in beefsms.get("models") or [] if isinstance(row, dict)}
+        if ids.get("happy/glm-5.3-plus", {}).get("compactionModel") != COMPACTION_MODEL:
+            print("FAIL glm-5.3-plus compactionModel missing", file=sys.stderr)
+            return 1
+        if ids.get("deepseek-flash", {}).get("compactionModel") != COMPACTION_MODEL:
+            print("FAIL deepseek-flash compactionModel missing", file=sys.stderr)
+            return 1
+        again_models = merge_models_file(models_path)
+        if again_models != "unchanged":
+            print(f"FAIL models merge not idempotent: {again_models}", file=sys.stderr)
+            return 1
     print("omp-merge-config: self-test passed")
     return 0
 
@@ -187,6 +278,13 @@ def main() -> int:
         ),
     )
     parser.add_argument("--example", default="")
+    parser.add_argument(
+        "--models",
+        default=os.path.join(
+            os.environ.get("OMP_AGENT_DIR", str(Path.home() / ".omp" / "agent")),
+            "models.yml",
+        ),
+    )
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
@@ -195,6 +293,8 @@ def main() -> int:
     example = Path(args.example) if args.example else None
     status = merge_file(path, example)
     print(f"omp-merge-config: {status} {path}")
+    models_status = merge_models_file(Path(args.models))
+    print(f"omp-merge-config: models {models_status} {args.models}")
     return 0
 
 

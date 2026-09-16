@@ -2,6 +2,9 @@ import type { ExtensionAPI, ProviderModelConfig } from "@oh-my-pi/pi-coding-agen
 
 const BASE_URL = "http://openai.beefsms.com:38888/v1";
 const PROVIDER = "beefsms";
+const COMPACTION_MODEL = "beefsms/deepseek-flash";
+
+type BeefsmsModel = ProviderModelConfig & { compactionModel: string };
 
 const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -15,7 +18,7 @@ function textModel(
 	id: string,
 	name: string,
 	compat: NonNullable<ProviderModelConfig["compat"]>,
-): ProviderModelConfig {
+): BeefsmsModel {
 	return {
 		id,
 		name,
@@ -25,10 +28,11 @@ function textModel(
 		maxTokens: 131_072,
 		cost: ZERO_COST,
 		compat,
+		compactionModel: COMPACTION_MODEL,
 	};
 }
 
-const MODELS: ProviderModelConfig[] = [
+const MODELS: BeefsmsModel[] = [
 	{
 		id: "happy/kimi-k3",
 		name: "Kimi K3",
@@ -46,6 +50,7 @@ const MODELS: ProviderModelConfig[] = [
 			thinkingFormat: "openai",
 			streamMarkupHealingPattern: "kimi",
 		},
+		compactionModel: COMPACTION_MODEL,
 	},
 	textModel("happy/glm-5.3", "GLM-5.3", GLM_COMPAT),
 	textModel("happy/glm-5.3-plus", "GLM-5.3 Plus", GLM_COMPAT),
@@ -74,12 +79,13 @@ const MODELS: ProviderModelConfig[] = [
 			stripImageInput: false,
 			clampOutputToModelMax: true,
 		},
+		compactionModel: COMPACTION_MODEL,
 	},
 ];
 
 const MODELS_BY_ID = new Map(MODELS.map((model) => [model.id, model]));
 
-function guessUnknownModel(id: string): ProviderModelConfig {
+function guessUnknownModel(id: string): BeefsmsModel {
 	const lower = id.toLowerCase();
 	if (lower.includes("glm")) return textModel(id, id, GLM_COMPAT);
 	if (lower.includes("qwen")) {
@@ -110,7 +116,7 @@ function guessUnknownModel(id: string): ProviderModelConfig {
 	});
 }
 
-function modelForId(id: string): ProviderModelConfig {
+function modelForId(id: string): BeefsmsModel {
 	return MODELS_BY_ID.get(id) ?? guessUnknownModel(id);
 }
 
@@ -148,9 +154,9 @@ async function listGatewayIds(apiKey: string, signal?: AbortSignal): Promise<str
 	return parseModelIds(await response.json());
 }
 
-function modelsFromIds(ids: string[]): ProviderModelConfig[] {
+function modelsFromIds(ids: string[]): BeefsmsModel[] {
 	const seen = new Set<string>();
-	const models: ProviderModelConfig[] = [];
+	const models: BeefsmsModel[] = [];
 	for (const id of ids) {
 		if (seen.has(id)) continue;
 		seen.add(id);
@@ -163,7 +169,7 @@ function modelsFromIds(ids: string[]): ProviderModelConfig[] {
 	return models.length > 0 ? models : [...MODELS];
 }
 
-async function fetchLiveModels(apiKey: string | undefined): Promise<ProviderModelConfig[]> {
+async function fetchLiveModels(apiKey: string | undefined): Promise<BeefsmsModel[]> {
 	if (!apiKey) return [...MODELS];
 	try {
 		return modelsFromIds(await listGatewayIds(apiKey));

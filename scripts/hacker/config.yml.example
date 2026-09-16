@@ -1,6 +1,7 @@
 modelRoles:
   default: beefsms/happy/glm-5.3-plus
   smol: beefsms/deepseek-flash
+  compact: beefsms/deepseek-flash
   plan: beefsms/happy/kimi-k3
   commit: beefsms/happy/qwen-3.8-fast
   vision: beefsms/deepseek-flash:low
