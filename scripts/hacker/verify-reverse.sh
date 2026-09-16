@@ -165,10 +165,10 @@ if [ -f "$AGENT_DIR/config.yml" ]; then
 import sys, yaml
 data = yaml.safe_load(open(sys.argv[1], encoding="utf-8")) or {}
 comp = data.get("compaction") or {}
-if comp.get("enabled") is True and comp.get("methodOrder") == ["shake"]:
-    print("ok   compaction shake-only")
+if comp.get("enabled") is True and comp.get("methodOrder") == ["shake", "soft"]:
+    print("ok   compaction shake then soft")
 else:
-    print("FAIL compaction is not shake-only:", comp)
+    print("FAIL compaction methodOrder is not [shake, soft]:", comp)
     raise SystemExit(1)
 ttsr = data.get("ttsr") or {}
 if ttsr.get("repeatMode") == "after-gap" and ttsr.get("repeatGap") == 2:

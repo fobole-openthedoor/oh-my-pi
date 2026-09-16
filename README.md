@@ -8,7 +8,7 @@ Run every script named in the copy-block (install.sh, install-reverse.sh, verify
 
 Repo: https://github.com/fobole-openthedoor/oh-my-pi (`main`)
 
-A fork of [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) with a **red-team-oriented install kit**: beefsms OpenAI-compat provider, [Claude-Red](https://github.com/SnailSploit/Claude-Red) `offensive-*` skills, GLM auto-continue, Kimi thinking rewrite, telegraph-style thinking abort, and shake-only compaction.
+A fork of [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) with a **red-team-oriented install kit**: beefsms OpenAI-compat provider, [Claude-Red](https://github.com/SnailSploit/Claude-Red) `offensive-*` skills, GLM auto-continue, Kimi thinking rewrite, telegraph-style thinking abort, and shake-then-soft compaction.
 
 **Do not** `curl -fsSL https://omp.sh/install | sh`. **Do not** `bun install -g @oh-my-pi/pi-coding-agent`. Those are upstream binaries and do not include this kit. The **Install** section below is upstream; ignore it when installing this fork.
 

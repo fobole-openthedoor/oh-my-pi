@@ -19,7 +19,7 @@ except ImportError:
 KIT_OWNED = {
     "compaction": {
         "enabled": True,
-        "methodOrder": ["shake"],
+        "methodOrder": ["shake", "soft"],
         "midTurnEnabled": True,
     },
     "statusLine": {
@@ -222,7 +222,7 @@ def self_test() -> int:
         if compaction.get("enabled") is not True:
             print("FAIL compaction.enabled not true", file=sys.stderr)
             return 1
-        if compaction.get("methodOrder") != ["shake"]:
+        if compaction.get("methodOrder") != ["shake", "soft"]:
             print(f"FAIL methodOrder {compaction.get('methodOrder')}", file=sys.stderr)
             return 1
         if compaction.get("idleTimeoutSeconds") != 60:

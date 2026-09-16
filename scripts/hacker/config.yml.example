@@ -12,7 +12,7 @@ tools:
   approvalMode: yolo
 compaction:
   enabled: true
-  methodOrder: [shake]
+  methodOrder: [shake, soft]
   midTurnEnabled: true
 web_search:
   enabled: true
