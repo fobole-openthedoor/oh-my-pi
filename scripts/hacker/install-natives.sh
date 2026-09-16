@@ -27,6 +27,7 @@ need tar
 need uname
 
 ver="$(python3 -c "import json; print(json.load(open('$NATIVE_PKG'))['version'])")"
+sentinel="$(python3 -c "print('__piNativesV' + ''.join(c if c.isalnum() else '_' for c in '$ver'))")"
 osname="$(uname -s | tr 'A-Z' 'a-z')"
 arch="$(uname -m)"
 case "$arch" in
@@ -35,12 +36,21 @@ case "$arch" in
 esac
 plat="${osname}-${arch}"
 
-if [ -f "$DEST/pi_natives.${plat}-modern.node" ] || \
-   [ -f "$DEST/pi_natives.${plat}-baseline.node" ] || \
-   [ -f "$DEST/pi_natives.${plat}.node" ]; then
-  log "already present in $DEST"
+have_match=0
+for f in "$DEST/pi_natives.${plat}-modern.node" \
+         "$DEST/pi_natives.${plat}-baseline.node" \
+         "$DEST/pi_natives.${plat}.node"; do
+  [ -f "$f" ] || continue
+  if grep -a -F -q "$sentinel" "$f"; then
+    have_match=1
+    break
+  fi
+done
+if [ "$have_match" -eq 1 ]; then
+  log "already present in $DEST ($ver)"
   exit 0
 fi
+log "refresh $plat natives to $ver"
 
 tgz="${TMPDIR:-/tmp}/pi-natives-${plat}-${ver}.tgz"
 url="https://registry.npmjs.org/@oh-my-pi/pi-natives-${plat}/-/pi-natives-${plat}-${ver}.tgz"
