@@ -13,6 +13,7 @@ tools:
 compaction:
   enabled: true
   methodOrder: [shake, soft]
+  thresholdPercent: 50
   midTurnEnabled: true
 web_search:
   enabled: true

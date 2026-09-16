@@ -20,6 +20,7 @@ KIT_OWNED = {
     "compaction": {
         "enabled": True,
         "methodOrder": ["shake", "soft"],
+        "thresholdPercent": 50,
         "midTurnEnabled": True,
     },
     "statusLine": {
@@ -224,6 +225,9 @@ def self_test() -> int:
             return 1
         if compaction.get("methodOrder") != ["shake", "soft"]:
             print(f"FAIL methodOrder {compaction.get('methodOrder')}", file=sys.stderr)
+            return 1
+        if compaction.get("thresholdPercent") != 50:
+            print(f"FAIL thresholdPercent {compaction.get('thresholdPercent')}", file=sys.stderr)
             return 1
         if compaction.get("idleTimeoutSeconds") != 60:
             print("FAIL user compaction key dropped", file=sys.stderr)
