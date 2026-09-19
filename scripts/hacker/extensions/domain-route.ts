@@ -165,6 +165,8 @@ function bashAllowed(command: string): boolean {
 
 function toolAllowed(toolName: string, input: unknown): boolean {
 	if (ALLOWED_TOOLS.has(toolName)) return true;
+	// avs_* native tools (Android screen reader) are domain-neutral: never gate.
+	if (toolName.startsWith("avs_")) return true;
 	if (mcpOpenDatabase(toolName)) return true;
 	if (toolName === "bash" && bashAllowed(commandOf(input))) return true;
 	return false;

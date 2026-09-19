@@ -95,6 +95,10 @@ if [ -f "$KIT/install-natives.sh" ]; then
   echo "omp-install: prebuilt natives"
   sh "$KIT/install-natives.sh"
 fi
+if [ -f "$KIT/install-avs.sh" ]; then
+  echo "omp-install: avs android screen cli (best-effort)"
+  sh "$KIT/install-avs.sh" || echo "omp-install: avs build skipped/failed (non-fatal)"
+fi
 if [ -x "$PREFIX/scripts/link-omp.sh" ]; then
   echo "omp-install: link-omp.sh"
   sh "$PREFIX/scripts/link-omp.sh" || \

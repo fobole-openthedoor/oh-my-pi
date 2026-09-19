@@ -122,5 +122,5 @@ if [ -f "$KIT/launch.sh" ]; then
   log "launcher → $LAUNCHER_DIR/omp"
 fi
 
-chmod +x "$KIT/ghidra-open.sh" "$KIT/merge-config.py" "$KIT/skills/domain-route.py" 2>/dev/null || true
+chmod +x "$KIT/ghidra-open.sh" "$KIT/merge-config.py" "$KIT/skills/domain-route.py" "$KIT/install-avs.sh" 2>/dev/null || true
 log "done"
