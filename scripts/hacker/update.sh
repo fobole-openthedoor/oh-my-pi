@@ -68,6 +68,10 @@ fi
 if [ -x "$ROOT/scripts/hacker/install-natives.sh" ]; then
   sh "$ROOT/scripts/hacker/install-natives.sh" || true
 fi
+if [ -f "$ROOT/scripts/hacker/install-avs.sh" ]; then
+  echo "omp-update: avs android screen cli (best-effort)"
+  sh "$ROOT/scripts/hacker/install-avs.sh" || echo "omp-update: avs build skipped/failed (non-fatal)"
+fi
 
 KIT="$ROOT/scripts/hacker"
 export OMP_FORK_ROOT="$ROOT"
