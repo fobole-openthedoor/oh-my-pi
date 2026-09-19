@@ -152,7 +152,14 @@ function mcpOpenDatabase(toolName: string): boolean {
 	return /ghidra/i.test(toolName) && /open_database/i.test(toolName);
 }
 
+// avs (Android screen reader) is a domain-neutral utility: reading the phone
+// screen and tapping is useful across reverse/crack/pentest, so never gate it.
+// Match avs only as a command token (start of line or after a shell separator,
+// optionally path-prefixed), not as a substring of words like "canvas".
+const AVS_COMMAND = /(^|[\s;|&(])(\S*\/)?avs(\s|$)/;
+
 function bashAllowed(command: string): boolean {
+	if (AVS_COMMAND.test(command)) return true;
 	return BASH_ALLOW.some((token) => command.includes(token));
 }
 

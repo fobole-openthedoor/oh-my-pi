@@ -89,7 +89,7 @@ for rule in "$KIT/rules"/*.md; do
   log "rule → $AGENT_DIR/rules/$base"
 done
 
-for adapter in reverse-skill crack claude-red; do
+for adapter in reverse-skill crack claude-red avs; do
   if [ -f "$KIT/skills/$adapter/SKILL.md" ]; then
     mkdir -p "$AGENT_DIR/skills/$adapter"
     install -m 644 "$KIT/skills/$adapter/SKILL.md" "$AGENT_DIR/skills/$adapter/SKILL.md"
