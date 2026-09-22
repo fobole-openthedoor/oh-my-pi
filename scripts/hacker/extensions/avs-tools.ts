@@ -1,6 +1,6 @@
 // avs-tools: native omp tools wrapping the `avs` Android screen CLI.
 //
-// Registers avs_devices / avs_snapshot / avs_tap / avs_key so the agent calls
+// Registers avs_devices / avs_snapshot / avs_tap / avs_type / avs_key so the agent calls
 // real tools instead of hand-assembling `adb`/`avs` bash. Each tool shells to
 // the `avs` binary (argv array, never a host shell) and returns its plain-text
 // output, which is already written for a coding agent. The vision model avs
@@ -75,7 +75,7 @@ export default function avsTools(pi: ExtensionAPI) {
 		name: "avs_tap",
 		label: "avs tap",
 		description:
-			"Tap a control from the most recent avs_snapshot. Give exactly one of: id (preferred), text (the label to match), or xy ('X,Y' device pixels, only when snapshot gave coordinates but no usable id/text). Ids expire after any tap/key, app change, or 10 minutes — snapshot again first. Never guess coordinates.",
+			"Tap a control from the most recent avs_snapshot. Give exactly one of: id (preferred), text (the label to match), or xy ('X,Y' device pixels, only when snapshot gave coordinates but no usable id/text). A control listed in the tree is clicked with an accessibility action (output via=action), not coordinate injection — overlays swallow input tap. Ids expire after any tap, type, or key, an app change, or 10 minutes. Never guess coordinates.",
 		parameters: z
 			.object({
 				id: z.number().int().positive().describe("Element id from the last snapshot").optional(),
@@ -97,6 +97,34 @@ export default function avsTools(pi: ExtensionAPI) {
 			if (params.id !== undefined) args.push(String(params.id));
 			else if (params.text !== undefined) args.push("--text", params.text);
 			else if (params.xy !== undefined) args.push("--xy", params.xy);
+			return run(args, params.serial);
+		},
+	});
+
+	pi.registerTool({
+		name: "avs_type",
+		label: "avs type",
+		description:
+			"Write text into an input from the last avs_snapshot without focusing it or opening a keyboard (accessibility setText). Use this instead of tapping the field and injecting keystrokes. Give exactly one of id (preferred) or text (the field label or hint), plus value. An input line ending in empty has no value yet — the quoted text is the hint, not typed content. Ids expire after any tap, type, or key.",
+		parameters: z.object({
+			id: z.number().int().positive().describe("Input id from the last snapshot").optional(),
+			text: z.string().describe("Field label or hint, e.g. Phone number").optional(),
+			value: z.string().describe("Text to write. Digits and Unicode are both fine."),
+			serial,
+		}),
+		approval: "write",
+		async execute(_id, params) {
+			const hasId = params.id !== undefined;
+			const hasText = params.text !== undefined && params.text.trim() !== "";
+			if (hasId === hasText) {
+				return {
+					content: [{ type: "text", text: "avs_type needs exactly one of id / text, plus value." }],
+					isError: true,
+				};
+			}
+			const args = ["type"];
+			if (hasId) args.push(String(params.id), params.value);
+			else args.push("--text", params.text as string, params.value);
 			return run(args, params.serial);
 		},
 	});

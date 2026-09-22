@@ -1,8 +1,9 @@
 #!/bin/sh
 # Install the `avs` Android screen CLI so the avs-tools extension and the avs
-# skill work. Prefers the prebuilt binary vendored in this kit (bin/avs-<os>-<arch>);
-# falls back to `go build` from $AVS_SRC. Best-effort: skips cleanly if avs is
-# already on PATH or nothing can produce it.
+# skill work. Prefers the prebuilt binary vendored in this kit (bin/avs-<os>-<arch>)
+# and replaces an older copy at the install path. Falls back to `go build` from
+# $AVS_SRC only when this OS/arch has no prebuilt. Best-effort: skips cleanly
+# when nothing can produce a binary.
 set -eu
 
 KIT="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
@@ -10,11 +11,6 @@ AVS_SRC="${AVS_SRC:-$HOME/MagicPhone/avs}"
 LAUNCHER_DIR="${OMP_LAUNCHER_DIR:-/usr/local/bin}"
 
 log() { printf 'omp-install-avs: %s\n' "$*"; }
-
-if command -v avs >/dev/null 2>&1; then
-  log "avs already on PATH ($(command -v avs)) — skip"
-  exit 0
-fi
 
 osname="$(uname -s | tr 'A-Z' 'a-z')"
 arch="$(uname -m)"
@@ -36,8 +32,17 @@ else
 fi
 
 if [ -f "$prebuilt" ]; then
+  if [ -f "$DEST/avs" ] && cmp -s "$prebuilt" "$DEST/avs"; then
+    log "prebuilt ${osname}-${arch} already at $DEST/avs"
+    exit 0
+  fi
   install -m 755 "$prebuilt" "$DEST/avs"
   log "installed prebuilt ${osname}-${arch} → $DEST/avs"
+  exit 0
+fi
+
+if command -v avs >/dev/null 2>&1; then
+  log "avs already on PATH ($(command -v avs)) — no prebuilt for ${osname}-${arch}, skip"
   exit 0
 fi
 
