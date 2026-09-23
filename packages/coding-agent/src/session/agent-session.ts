@@ -56,6 +56,7 @@ import type {
 	AssistantMessage,
 	CodexCompactionContext,
 	ImageContent,
+	Judge,
 	Message,
 	MessageAttribution,
 	Model,
@@ -122,6 +123,7 @@ import { releaseCompletionHandles } from "../eval/completion-bridge";
 import { releaseJudgmentBatches } from "../eval/judgment-batch-bridge";
 import type { EvalPreludeDefinition } from "../eval/preludes";
 import type { PythonResult } from "../eval/py/executor";
+import { formatEvalStateContext } from "../eval/state";
 import { WorkPoolRegistry } from "../task/workpool";
 import type { BashPtyOptions, BashResult } from "../exec/bash-executor";
 import type { TtsrManager } from "../export/ttsr";
@@ -159,6 +161,7 @@ import { GoalRuntime } from "../goals/runtime";
 import type { GoalModeState } from "../goals/state";
 import type { HindsightSessionState } from "../hindsight/state";
 import { type LocalProtocolOptions, resolveLocalUrlToPath } from "../internal-urls";
+import { hasNativeJudge, journalJudgmentUsage, resolveJudge } from "../judgment";
 import type { IrcMessage } from "@oh-my-pi/pi-tui/tools/hub";
 import type { DaemonCompletionNotification } from "../launch/protocol";
 import { shutdownMnemopiEmbedClient } from "../mnemopi/embed-client";
@@ -206,7 +209,7 @@ import {
 } from "@oh-my-pi/pi-tui/thinking";
 import { isLowSignalTitleInput } from "../tiny/text";
 import { shutdownTinyTitleClient } from "../tiny/title-client";
-import type { ImageAttachmentEntry } from "../tools";
+import type { ImageAttachmentEntry, ToolSession } from "../tools";
 import { resolveApproval } from "../tools/approval";
 import { type AskToolDetails } from "@oh-my-pi/pi-tui/tools/ask";
 import { type AskToolInput, recoverAskQuestions } from "../tools/ask";
@@ -700,6 +703,7 @@ export class AgentSession {
 	readonly #bash: BashRunner;
 
 	readonly #eval: EvalRunner;
+	readonly #evalToolSession: ToolSession | undefined;
 	/**
 	 * AsyncJobManager owned by this session (top-level only). Subagents leave
 	 * this undefined and **MUST NOT** dispose the global instance on teardown.
@@ -1343,6 +1347,9 @@ export class AgentSession {
 			kernelOwnerId: config.evalKernelOwnerId ?? `agent-session:${Snowflake.next()}`,
 			parentSessionId: config.parentEvalSessionId,
 		});
+		this.#evalToolSession = config.evalToolSession;
+		const initialEvalStateContext = this.#buildEvalStateContextMessage();
+		if (initialEvalStateContext) this.agent.appendMessage(initialEvalStateContext);
 		const ircHost: IrcBridgeHost = {
 			agent: this.agent,
 			sessionManager: this.sessionManager,
@@ -1719,8 +1726,12 @@ export class AgentSession {
 			schedulePostPromptTask: (task, options) => this.#schedulePostPromptTask(task, options),
 			scheduleAgentContinue: options => this.#scheduleAgentContinue(options),
 			promptGeneration: () => this.#promptGeneration,
+			ruleJudge: () => this.ruleJudge(),
+			deliverRuleWarning: (content, ruleNames) => this.#deliverRuleWarning(content, ruleNames),
+			sessionGeneration: () => this.#sessionGeneration,
 		};
 		this.#ttsr = new TtsrCoordinator(ttsrHost, config.ttsrManager);
+		this.agent.setOnBeforeYield(() => this.#ttsr.settleJudgments());
 		this.#obfuscator = config.obfuscator;
 		const providerBoundaryHost: SessionProviderBoundaryHost = {
 			agent: this.agent,
@@ -2435,6 +2446,38 @@ export class AgentSession {
 			durationMs,
 			epoch,
 		});
+	}
+
+	/**
+	 * Judge for TTSR `question` rules per `ttsr.judge`, used by live judging and
+	 * `/omfg` validation. `auto` requires the judge role to resolve to a native
+	 * System One model, since every completed output may cost a request. Rebuilt
+	 * per call so model, credential, and session switches apply.
+	 */
+	ruleJudge(): Judge | undefined {
+		const mode = this.settings.get("ttsr.judge");
+		if (mode === "off" || (mode === "auto" && !hasNativeJudge(this.settings, this.#modelRegistry))) return undefined;
+		return resolveJudge({
+			settings: this.settings,
+			registry: this.#modelRegistry,
+			sessionModel: this.model,
+			sessionId: this.sessionId,
+			metadataResolver: provider => this.agent.metadataForProvider(provider),
+			onUsage: journalJudgmentUsage(this.sessionManager, "ttsr"),
+		});
+	}
+
+	/**
+	 * Non-interrupting delivery: mid-run the warning joins the next step; an idle
+	 * session starts a turn so the agent can act on it. Persisting the message
+	 * records the rules as injected (see #persistMessageEnd).
+	 */
+	async #deliverRuleWarning(content: string, ruleNames: string[]): Promise<void> {
+		if (this.#isDisposed) return;
+		await this.sendCustomMessage(
+			{ customType: "ttsr-injection", content, display: false, details: { rules: ruleNames }, attribution: "agent" },
+			{ deliverAs: "aside" },
+		);
 	}
 
 	async #formatAsyncResultForFollowUp(result: string, meta?: OutputMeta): Promise<string> {
@@ -4409,6 +4452,7 @@ export class AgentSession {
 				from: event.from,
 				to: event.to,
 				role: event.role,
+				reason: event.reason,
 			});
 		} else if (event.type === "retry_fallback_succeeded") {
 			await this.#extensionRunner.emit({
@@ -5673,7 +5717,39 @@ export class AgentSession {
 	}
 
 	buildDisplaySessionContext(): SessionContext {
-		return this.#providerBoundary.buildDisplaySessionContext();
+		return this.#withEvalStateContext(this.#providerBoundary.buildDisplaySessionContext());
+	}
+
+	#withEvalStateContext(context: SessionContext): SessionContext {
+		const evalStateContext = this.#buildEvalStateContextMessage();
+		if (!evalStateContext) return context;
+		return { ...context, messages: [...context.messages, evalStateContext] };
+	}
+
+	#buildEvalStateContextMessage(): CustomMessage | undefined {
+		const session = this.#evalToolSession;
+		if (!session) return undefined;
+		const historyHasEval = this.sessionManager.getBranch().some(entry => {
+			if (entry.type !== "message") return false;
+			const message = entry.message;
+			if (message.role === "pythonExecution" || (message.role === "toolResult" && message.toolName === "eval")) {
+				return true;
+			}
+			return (
+				message.role === "assistant" &&
+				message.content.some(block => block.type === "toolCall" && block.name === "eval")
+			);
+		});
+		const content = formatEvalStateContext(session, { historyHasEval });
+		if (!content) return undefined;
+		return {
+			role: "custom",
+			customType: "eval-state-context",
+			content,
+			display: false,
+			attribution: "agent",
+			timestamp: Date.now(),
+		};
 	}
 
 	/**
@@ -10391,7 +10467,7 @@ export class AgentSession {
 
 		// Update agent state — build display context to populate agent messages.
 		const stateContext = this.sessionManager.buildSessionContext();
-		const displayContext = deobfuscateSessionContext(stateContext, this.#obfuscator);
+		const displayContext = this.#withEvalStateContext(deobfuscateSessionContext(stateContext, this.#obfuscator));
 		this.agent.replaceMessages(displayContext.messages);
 		this.#rehydrateCheckpointRewindState();
 		this.#advisors.resetSessionState({ preserveCost: true });
