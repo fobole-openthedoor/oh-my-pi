@@ -40,6 +40,10 @@ mkdir -p "$TOOLS"
 
 if [ -d "$CLAUDE_RED_DIR/.git" ]; then
   log "already at $CLAUDE_RED_DIR"
+  # Descriptions are rewritten onto upstream SKILL.md files. Restore those
+  # paths first so a dirty tree does not block a fast-forward, then rewrite.
+  git -C "$CLAUDE_RED_DIR" checkout -- Skills \
+    || log "could not restore Skills before update"
   git -C "$CLAUDE_RED_DIR" fetch --prune --quiet || true
   git -C "$CLAUDE_RED_DIR" merge --ff-only --quiet FETCH_HEAD 2>/dev/null || \
     log "left existing checkout as-is (not fast-forward)"

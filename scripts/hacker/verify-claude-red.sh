@@ -185,8 +185,35 @@ if [ -f "$KIT/skills/claude-red/route.py" ] && [ "$count" -gt 0 ]; then
     *offensive-sqli*) ok "route sqli → offensive-sqli" ;;
     *) bad "route sqli missed offensive-sqli: $out" ;;
   esac
+  out="$(python3 "$KIT/skills/claude-red/route.py" --root "$CLAUDE_RED_DIR" --hint xss || true)"
+  case "$out" in
+    *offensive-xss*) ok "route xss → offensive-xss" ;;
+    *) bad "route xss missed offensive-xss: $out" ;;
+  esac
+  web="$(python3 "$KIT/skills/domain-route.py" --json --hint '网站渗透 https://example.com' | python3 -c 'import json,sys; print(json.load(sys.stdin).get("next"))')"
+  if [ "$web" = "offensive-fast-checking" ]; then
+    ok "网站渗透 → offensive-fast-checking"
+  else
+    bad "网站渗透 expected offensive-fast-checking, got $web"
+  fi
 else
   bad "router script missing or pack empty"
+fi
+
+if [ -f "$KIT/skills/claude-red/index.py" ]; then
+  if python3 "$KIT/skills/claude-red/index.py" --self-test >/dev/null; then
+    ok "index.py self-test"
+  else
+    bad "index.py self-test"
+  fi
+fi
+
+if [ -d "$CLAUDE_RED_DIR/Skills" ] && [ -f "$KIT/skills/claude-red/index.py" ]; then
+  if python3 "$KIT/skills/claude-red/index.py" --root "$CLAUDE_RED_DIR" --audit >/dev/null; then
+    ok "skill descriptions survive YAML"
+  else
+    bad "skill descriptions are empty or YAML comments (omp will drop those skills)"
+  fi
 fi
 
 if [ "$FAIL" -ne 0 ]; then

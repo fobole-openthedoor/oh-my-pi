@@ -84,6 +84,11 @@ if [ -d "$CLAUDE_RED_DIR/.git" ] && [ -f "$KIT/install-claude-red.sh" ]; then
   sh "$KIT/install-claude-red.sh" || \
     echo "omp-update: claude-red refresh failed (non-fatal)" >&2
 fi
+if [ -f "$KIT/install-web.sh" ]; then
+  echo "omp-update: web pentest tools"
+  sh "$KIT/install-web.sh" || \
+    echo "omp-update: web toolchain failed (non-fatal)" >&2
+fi
 
 echo "omp-update: now $(git log -1 --oneline)"
 echo "omp-update: restart omp to load the new tree"

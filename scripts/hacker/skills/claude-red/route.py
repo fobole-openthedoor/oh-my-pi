@@ -77,11 +77,25 @@ ALIASES = {
 }
 
 TOKEN_RE = re.compile(r"[a-z0-9+]{3,}")
+# Host fragments in a pasted URL are not a vulnerability. Without this filter
+# "网站渗透 https://example.com" scores every skill that mentions https/com
+# and the alphabetical winner (offensive-api-abuse) is treated as the match.
+STOPWORDS = frozenset({
+    "http",
+    "https",
+    "www",
+    "com",
+    "net",
+    "org",
+    "html",
+    "php",
+    "example",
+})
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.S)
 
 
 def tokenize(text: str) -> list[str]:
-    return TOKEN_RE.findall(text.lower())
+    return [token for token in TOKEN_RE.findall(text.lower()) if token not in STOPWORDS]
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:

@@ -57,6 +57,8 @@ If `/usr/local/bin` is not writable, the launcher lands in `~/.local/bin`. Put t
 | `~/.omp/agent/extensions/` | GLM auto-continue, Kimi thinking, beefsms `/login`, domain-route, ghidra-open |
 | `$HOME/tools/claude-red` | [Claude-Red](https://github.com/SnailSploit/Claude-Red) pack |
 | `~/.omp/agent/skills/offensive-*` | Each Claude-Red `SKILL.md` linked as a normal omp skill |
+| `/usr/local/bin/{nuclei,httpx,subfinder}` | Web scanner, HTTP probe, subdomain enum (`install-web.sh`) |
+| `$HOME/tools/SecLists` | Web / DNS / common-credential wordlists (sparse checkout) |
 
 Update later (`git pull` the fork, `bun install`, then re-seed extensions / adapters / MCP and merge kit-owned `config.yml` keys plus beefsms `compactionModel`; does not overwrite API keys):
 
@@ -110,6 +112,18 @@ What that installs (matching the reference host):
 | apt | openjdk-21, radare2, apktool, binwalk, gdb, ffuf, nmap, … |
 
 IDA Pro / Burp are **not** auto-installed.
+
+## Web pentest stack
+
+`install.sh` also runs `install-web.sh`. Pins live in `web-versions.env`.
+
+| Piece | What it is |
+| --- | --- |
+| nuclei 3.11.1, httpx 1.12.0, subfinder 2.16.0 | ProjectDiscovery linux-amd64 binaries |
+| SecLists | sparse checkout: `Discovery/Web-Content`, `Discovery/DNS`, `Passwords/Common-Credentials` |
+| apt | gobuster, hydra, john, whatweb, wfuzz, dirb |
+
+Claude-Red skills that ship without YAML frontmatter (XSS, SSRF, XXE, IDOR, file upload, …) get a quoted `description` taken from their `## Description` section. An unquoted `description: # SKILL:` is a YAML comment, and omp drops the skill.
 
 ## Work mode: 逆向 / 破解 / 渗透
 

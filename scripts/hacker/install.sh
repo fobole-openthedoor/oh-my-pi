@@ -152,6 +152,13 @@ if [ "${OMP_SKIP_CLAUDE_RED:-0}" != "1" ]; then
   fi
 fi
 
+if [ "${OMP_SKIP_WEB:-0}" != "1" ] && [ -f "$KIT/install-web.sh" ]; then
+  echo "omp-install: web pentest tools"
+  if ! sh "$KIT/install-web.sh"; then
+    echo "omp-install: web toolchain failed (non-fatal; retry $KIT/install-web.sh)" >&2
+  fi
+fi
+
 echo "omp-install: done"
 echo "omp-install: $PREFIX @ $(git -C "$PREFIX" log -1 --oneline)"
 echo "omp-install: set OPENAI_API_KEY in $ENV_FILE (beefsms), then: omp"
