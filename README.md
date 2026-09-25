@@ -8,7 +8,7 @@ Run every script named in the copy-block (install.sh, install-reverse.sh, verify
 
 Repo: https://github.com/fobole-openthedoor/oh-my-pi (`main`)
 
-A fork of [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) with a **red-team-oriented install kit**: beefsms OpenAI-compat provider, [Claude-Red](https://github.com/SnailSploit/Claude-Red) `offensive-*` skills, GLM auto-continue, Kimi thinking rewrite, telegraph-style thinking abort, and shake-then-soft compaction.
+A fork of [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) with a **red-team-oriented install kit**: beefsms OpenAI-compat provider, [Claude-Red](https://github.com/SnailSploit/Claude-Red) `offensive-*` skills, Kimi thinking rewrite, telegraph-style thinking abort, and shake-then-soft compaction.
 
 **Do not** `curl -fsSL https://omp.sh/install | sh`. **Do not** `bun install -g @oh-my-pi/pi-coding-agent`. Those are upstream binaries and do not include this kit. The **Install** section below is upstream; ignore it when installing this fork.
 
@@ -36,7 +36,7 @@ Paste the next block to any terminal AI. It must install the **full** kit under 
 - 供应商：`OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`，provider id `beefsms`，`modelProviderOrder: [beefsms]`。模型 `happy/kimi-k3` / `happy/glm-5.3` / `happy/glm-5.3-plus` / `happy/qwen-3.8-fast` / `deepseek-flash`。`modelRoles.default` 必须是 `beefsms/happy/glm-5.3-plus`；`modelRoles.smol` 和 `modelRoles.compact` 必须是 `beefsms/deepseek-flash`；`modelRoles.vision` 必须是 `beefsms/deepseek-flash:low`；不要预置 `modelRoles.slow`。
 - Key：TUI 里 `/login beefsms`。也可写 `~/.config/omp/env` 的 `BEEFSMS_API_KEY` 或 `OPENAI_API_KEY`。仓库只有占位符。
 - 必须跑完：`scripts/hacker/install.sh`、`install-claude-red.sh`（若 install.sh 跳过了）、`install-reverse.sh`。
-- 装完应存在：`$HOME/tools/claude-red` 且 `offensive-*` symlink 进 `$HOME/.omp/agent/skills/`；`$HOME/tools/reverse-skill`；`$HOME/tools/ghidra`（12.1.3 PUBLIC，`analyzeHeadless`）；jadx 1.5.6；`re-mcp-ghidra` stdio；`~/.omp/agent/skills/{reverse-skill,crack,claude-red}/SKILL.md`；extensions：`glm-auto-continue.ts`、`beefsms-kimi-thinking.ts`、`beefsms-provider.ts`、`domain-route.ts`、`ghidra-open.ts`、`drop-degenerate-thinking.ts`；`~/.omp/agent/rules/no-telegraph.md`。
+- 装完应存在：`$HOME/tools/claude-red` 且 `offensive-*` symlink 进 `$HOME/.omp/agent/skills/`；`$HOME/tools/reverse-skill`；`$HOME/tools/ghidra`（12.1.3 PUBLIC，`analyzeHeadless`）；jadx 1.5.6；`re-mcp-ghidra` stdio；`~/.omp/agent/skills/{reverse-skill,crack,claude-red}/SKILL.md`；extensions：`beefsms-kimi-thinking.ts`、`beefsms-provider.ts`、`domain-route.ts`、`ghidra-open.ts`、`drop-degenerate-thinking.ts`；`~/.omp/agent/rules/no-telegraph.md`。
 - `~/.omp/agent/mcp.json` 的 ghidra 为 stdio（`re-mcp-ghidra stdio`，env：GHIDRA_INSTALL_DIR / GHIDRA_HOME / JAVA_HOME）。不要改用 HTTP :8765。
 - 版本只准来自 `scripts/hacker/reverse-versions.env`（Ghidra zip sha256 必须是 `93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54`）。
 - 启动器：`scripts/hacker/launch.sh`，避免 `~/.bashrc` 里其它 `OPENAI_BASE_URL` 漏进来。

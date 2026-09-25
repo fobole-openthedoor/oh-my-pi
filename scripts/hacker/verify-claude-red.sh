@@ -63,12 +63,6 @@ else
   bad "AGENTS.md missing Work mode triage"
 fi
 
-if [ -f "$AGENT_DIR/extensions/glm-auto-continue.ts" ]; then
-  ok "glm-auto-continue.ts present"
-else
-  bad "glm-auto-continue.ts missing"
-fi
-
 if [ -f "$AGENT_DIR/extensions/beefsms-kimi-thinking.ts" ]; then
   ok "beefsms-kimi-thinking.ts present"
 else

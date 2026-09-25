@@ -54,7 +54,7 @@ If `/usr/local/bin` is not writable, the launcher lands in `~/.local/bin`. Put t
 | `~/.omp/agent/config.yml` | roles (default = `beefsms/happy/glm-5.3-plus`, smol/compact = `beefsms/deepseek-flash`, vision = `beefsms/deepseek-flash:low`, no `slow` preset), yolo, shake-then-soft compact at 50%, thinking max |
 | `~/.omp/agent/AGENTS.md` | Work mode: 逆向 / 破解 / 渗透 |
 | `~/.omp/agent/mcp.json` | ghidra stdio MCP |
-| `~/.omp/agent/extensions/` | GLM auto-continue, Kimi thinking, beefsms `/login`, domain-route, ghidra-open |
+| `~/.omp/agent/extensions/` | Kimi thinking, beefsms `/login`, domain-route, ghidra-open |
 | `$HOME/tools/claude-red` | [Claude-Red](https://github.com/SnailSploit/Claude-Red) pack |
 | `~/.omp/agent/skills/offensive-*` | Each Claude-Red `SKILL.md` linked as a normal omp skill |
 | `/usr/local/bin/{nuclei,httpx,subfinder}` | Web scanner, HTTP probe, subdomain enum (`install-web.sh`) |
