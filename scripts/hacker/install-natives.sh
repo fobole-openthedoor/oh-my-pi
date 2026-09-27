@@ -27,7 +27,6 @@ need tar
 need uname
 
 ver="$(python3 -c "import json; print(json.load(open('$NATIVE_PKG'))['version'])")"
-sentinel="$(python3 -c "print('__piNativesV' + ''.join(c if c.isalnum() else '_' for c in '$ver'))")"
 osname="$(uname -s | tr 'A-Z' 'a-z')"
 arch="$(uname -m)"
 case "$arch" in
@@ -36,17 +35,36 @@ case "$arch" in
 esac
 plat="${osname}-${arch}"
 
-have_match=0
-for f in "$DEST/pi_natives.${plat}-modern.node" \
-         "$DEST/pi_natives.${plat}-baseline.node" \
-         "$DEST/pi_natives.${plat}.node"; do
-  [ -f "$f" ] || continue
-  if grep -a -F -q "$sentinel" "$f"; then
-    have_match=1
-    break
-  fi
-done
-if [ "$have_match" -eq 1 ]; then
+# 18.3.4+ stamps PI_NATIVES_VERSION_STAMP:<ver>\0 after link.
+# Older releases export __piNativesV<ver> instead. Either identity matches.
+if python3 - "$ver" \
+  "$DEST/pi_natives.${plat}-modern.node" \
+  "$DEST/pi_natives.${plat}-baseline.node" \
+  "$DEST/pi_natives.${plat}.node" <<'PY'
+import pathlib, sys
+ver = sys.argv[1]
+stamp = b"PI_NATIVES_VERSION_STAMP:" + ver.encode() + b"\0"
+legacy = ("__piNativesV" + "".join(c if c.isalnum() else "_" for c in ver)).encode()
+def legacy_hit(data: bytes) -> bool:
+    start = 0
+    while True:
+        at = data.find(legacy, start)
+        if at < 0:
+            return False
+        nxt = data[at + len(legacy):at + len(legacy) + 1]
+        if nxt == b"" or not (nxt.isalnum() or nxt == b"_"):
+            return True
+        start = at + 1
+for raw in sys.argv[2:]:
+    path = pathlib.Path(raw)
+    if not path.is_file():
+        continue
+    data = path.read_bytes()
+    if stamp in data or legacy_hit(data):
+        sys.exit(0)
+sys.exit(1)
+PY
+then
   log "already present in $DEST ($ver)"
   exit 0
 fi
