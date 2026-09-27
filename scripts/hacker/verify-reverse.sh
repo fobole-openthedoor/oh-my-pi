@@ -10,6 +10,7 @@ TOOLS="${REVERSE_SKILL_TOOLS_DIR:-$HOME/tools}"
 REVERSE_SKILL_DIR="${REVERSE_SKILL_DIR:-$TOOLS/reverse-skill}"
 GHIDRA_HOME="${GHIDRA_INSTALL_DIR:-${GHIDRA_HOME:-$TOOLS/ghidra}}"
 JADX_DIR="${JADX_DIR:-$TOOLS/jadx}"
+APK_REVERSE_DIR="${APK_REVERSE_DIR:-$TOOLS/apk-reverse}"
 AGENT_DIR="${OMP_AGENT_DIR:-$HOME/.omp/agent}"
 ENV_FILE="${OMP_ENV:-$HOME/.config/omp/env}"
 FAIL=0
@@ -39,6 +40,10 @@ check_cmd frida
 check_cmd objection
 check_cmd pwn
 check_cmd re-mcp-ghidra
+check_cmd droidasc
+check_cmd ddc
+check_cmd apksigner
+check_cmd zipalign
 
 if [ -x "$GHIDRA_HOME/support/analyzeHeadless" ]; then
   ok "analyzeHeadless → $GHIDRA_HOME/support/analyzeHeadless"
@@ -56,6 +61,48 @@ if [ -f "$REVERSE_SKILL_DIR/skills/tool-index.md" ]; then
   ok "tool-index.md present"
 else
   bad "tool-index.md missing (run bash $REVERSE_SKILL_DIR/skills/scripts/refresh-tool-index.sh)"
+fi
+
+if [ -f "$APK_REVERSE_DIR/skills/apk-reverse/SKILL.md" ]; then
+  ok "apk-reverse sidecar → $APK_REVERSE_DIR"
+else
+  bad "apk-reverse sidecar missing at $APK_REVERSE_DIR"
+fi
+
+if grep -q 'omp-apk-reverse-sidecar-skill:start' "$REVERSE_SKILL_DIR/skills/apk-reverse/SKILL.md" \
+  && grep -q 'omp-apk-reverse-sidecar-community:start' \
+    "$REVERSE_SKILL_DIR/skills/references/community-security-skills.md"; then
+  ok "apk sidecar gate applied to reverse-skill"
+else
+  bad "apk sidecar gate missing (run apply-apk-sidecar.py)"
+fi
+
+if [ -x "$TOOLS/ddc/ddc" ]; then
+  got="$(sha256sum "$TOOLS/ddc/ddc" | awk '{print $1}')"
+  if [ "$got" = "$DDC_SHA256_X64" ]; then
+    ok "ddc sha256 $DDC_VERSION"
+  else
+    bad "ddc sha256 $got != $DDC_SHA256_X64"
+  fi
+else
+  bad "ddc binary missing at $TOOLS/ddc/ddc"
+fi
+
+fixture="$APK_REVERSE_DIR/tests/fixtures/apk/plain.apk"
+if [ -f "$fixture" ] && have ddc; then
+  if ddc info "$fixture" | grep -q 'package[[:space:]]*com.example.plain'; then
+    ok "ddc info reads the sidecar fixture package"
+  else
+    bad "ddc info did not report com.example.plain"
+  fi
+else
+  bad "ddc fixture missing at $fixture"
+fi
+
+if python3 "$KIT/apply-apk-sidecar.py" --self-test >/dev/null; then
+  ok "apply-apk-sidecar.py self-test"
+else
+  bad "apply-apk-sidecar.py self-test"
 fi
 
 if [ -f "$ENV_FILE" ]; then

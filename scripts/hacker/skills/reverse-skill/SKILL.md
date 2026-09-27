@@ -15,6 +15,7 @@ Do not dump the whole pack into context. Route, then open one PRIMARY skill.
 2. `NOW`: `bash $REVERSE_SKILL_ROOT/skills/scripts/master-route.sh --hint "<user task>"` → PRIMARY.
 3. `NOW`: `bash $REVERSE_SKILL_ROOT/skills/scripts/case-init.sh --hint "<user task>"` → `work/<case>/scope.md`. **auth not granted → do not ACT on a live target.** Local sample → `offline-sample` preset.
 4. `ACT`: Open `$REVERSE_SKILL_ROOT/skills/<PRIMARY>/SKILL.md` and follow ACTION REQUIRED.
+   When PRIMARY is `apk-reverse` and the sample is an APK, AAB, or dex, step 5 in that file (marker `omp-apk-reverse-sidecar-skill`) runs before jadx. Sidecar: `$APK_REVERSE_ROOT` (default `$HOME/tools/apk-reverse`), file `skills/apk-reverse/SKILL.md`. Read its symptom index and gates, then only the reference that index names. Keep `observed` / `inferred` / `unverified`. Open `ad-removal.md`, `membership-and-limits.md`, `updates-and-forced-upgrade.md`, or the kernel syscall-mask notes only when the user asked for that result. A server-side gate ends as a report.
 5. Tool paths **only** from `$REVERSE_SKILL_ROOT/skills/tool-index.md`. Missing tool → `bash $REVERSE_SKILL_ROOT/skills/scripts/bootstrap-reverse.sh <capability>`.
 
 Ghidra is at `$GHIDRA_INSTALL_DIR` (default `$HOME/tools/ghidra`). For a local sample, run `/ghidra-open <binary>` or the `ghidra_open` tool (analyzeHeadless into `<dir>/ghidra_projects/<basename>`), then MCP `open_database` with that file_path (`run_auto_analysis` false if analysis already ran).

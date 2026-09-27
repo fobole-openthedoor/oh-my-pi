@@ -13,7 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/fobole-openthedoor/oh-my-pi/main/sc
 ~/oh-my-pi/scripts/hacker/install-reverse.sh
 ```
 
-`install.sh` 会铺 launcher、beefsms、Claude-Red `offensive-*` skills 和 kit extension。第二行脚本按 `reverse-versions.env` 钉死版本拉齐本机工具链（含 Ghidra zip，约 570MB；已有安装可加 `--skip-ghidra`）。若 Claude-Red 被跳过，再跑 `~/oh-my-pi/scripts/hacker/install-claude-red.sh`。更新已有机器：`~/oh-my-pi/scripts/hacker/update.sh`（merge 安装包，不覆盖 key）。
+`install.sh` 会铺 launcher、beefsms、Claude-Red `offensive-*` skills、kit extension，并跑 `install-apk.sh`（apk-reverse sidecar、droidasc、ddc、apksigner、zipalign，以及 reverse-skill 上的症状索引闸门）。第二行脚本按 `reverse-versions.env` 钉死版本拉齐其余逆向工具链（含 Ghidra zip，约 570MB；已有安装可加 `--skip-ghidra`）。若 Claude-Red 被跳过，再跑 `~/oh-my-pi/scripts/hacker/install-claude-red.sh`。更新已有机器：`~/oh-my-pi/scripts/hacker/update.sh`（merge 安装包，不覆盖 key，并再次跑 `install-apk.sh`）。
 
 然后启动 `omp`，在 TUI 里执行 **`/login beefsms`**，粘贴 beefsms API key。网关地址已经写死为 `http://openai.beefsms.com:38888/v1`，不用填 URL。
 

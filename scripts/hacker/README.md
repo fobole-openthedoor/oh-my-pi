@@ -109,7 +109,12 @@ What that installs (matching the reference host):
 | jadx | 1.5.6 |
 | Ghidra MCP | `re-mcp-ghidra==3.0.3` **stdio** (not LaurieWired HTTP) |
 | pipx | frida-tools 14.10.4, objection 1.12.5, pwntools 4.15.0 |
-| apt | openjdk-21, radare2, apktool, binwalk, gdb, ffuf, nmap, … |
+| apt | openjdk-21, radare2, apktool, binwalk, gdb, ffuf, nmap, apksigner, zipalign, … |
+| apk-reverse sidecar | `https://github.com/newliver666/apk-reverse` → `$HOME/tools/apk-reverse` |
+| droidasc | 0.1.1.post2 (pipx) |
+| ddc | 0.1.15 linux-x64 → `$HOME/tools/ddc/ddc` |
+
+The sidecar stays a separate clone. `install.sh` and `update.sh` both run `install-apk.sh`, and `install-reverse.sh` calls it too, so a new install and a later update both clone the sidecar, install droidasc / ddc / apksigner / zipalign, and write the symptom-index gate into reverse-skill. Ghidra stays on `install-reverse.sh` without `--skip-ghidra`. Ad-removal, membership, forced-upgrade, and kernel syscall-mask notes open only when the user asked for that result. Claims keep `observed` / `inferred` / `unverified`.
 
 IDA Pro / Burp are **not** auto-installed.
 

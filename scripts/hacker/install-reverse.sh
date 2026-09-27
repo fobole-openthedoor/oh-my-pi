@@ -128,7 +128,7 @@ have sha256sum || need sha256sum
 mkdir -p "$TOOLS" "$HOME/.local/bin" "$AGENT_DIR/skills/reverse-skill"
 
 if [ "$SKIP_APT" -eq 0 ]; then
-  PKGS="git curl wget ca-certificates unzip tar jq python3 python3-venv python3-pip pipx openjdk-21-jdk radare2 apktool binwalk gdb gdb-multiarch ffuf nmap sqlmap hashcat file binutils strace ltrace xxd p7zip-full adb build-essential"
+  PKGS="git curl wget ca-certificates unzip tar jq python3 python3-venv python3-pip pipx openjdk-21-jdk radare2 apktool binwalk gdb gdb-multiarch ffuf nmap sqlmap hashcat file binutils strace ltrace xxd p7zip-full adb build-essential apksigner zipalign"
   MISSING=""
   for p in $PKGS; do
     if have dpkg; then
@@ -182,6 +182,9 @@ else
   log "clone reverse-skill → $REVERSE_SKILL_DIR"
   git clone --depth 1 "$REVERSE_SKILL_REPO" "$REVERSE_SKILL_DIR"
 fi
+
+log "apk sidecar, droidasc, ddc, apksigner, zipalign"
+sh "$KIT/install-apk.sh"
 
 if [ "$SKIP_GHIDRA" -eq 0 ]; then
   unpacked="$TOOLS/$GHIDRA_DIR_NAME"
@@ -239,6 +242,7 @@ ensure_env GHIDRA_INSTALL_DIR "$GHIDRA_HOME"
 ensure_env GHIDRA_HOME "$GHIDRA_HOME"
 ensure_env JAVA_HOME "$JAVA_HOME"
 ensure_env REVERSE_SKILL_ROOT "$REVERSE_SKILL_DIR"
+ensure_env APK_REVERSE_ROOT "$APK_REVERSE_DIR"
 
 MCP_CMD="$(command -v re-mcp-ghidra 2>/dev/null || true)"
 if [ -z "$MCP_CMD" ] && [ -x "$HOME/.local/bin/re-mcp-ghidra" ]; then
@@ -258,6 +262,7 @@ if [ -n "$MCP_CMD" ] && [ -x "$GHIDRA_HOME/support/analyzeHeadless" ]; then
       -e "s|__GHIDRA_HOME__|$GHIDRA_HOME|g" \
       -e "s|__OMP_FORK_ROOT__|${OMP_FORK_ROOT:-$HOME/oh-my-pi}|g" \
       -e "s|__CLAUDE_RED_ROOT__|${CLAUDE_RED_ROOT:-$HOME/tools/claude-red}|g" \
+      -e "s|__APK_REVERSE_ROOT__|$APK_REVERSE_DIR|g" \
       "$KIT/AGENTS.md.example" >"$AGENT_DIR/AGENTS.md"
     chmod 600 "$AGENT_DIR/AGENTS.md"
   fi
@@ -269,5 +274,6 @@ log "done"
 log "Ghidra $GHIDRA_HOME"
 log "jadx $JADX_DIR"
 log "reverse-skill $REVERSE_SKILL_DIR"
+log "apk-reverse $APK_REVERSE_DIR"
 log "JAVA_HOME $JAVA_HOME"
 log "verify: $KIT/verify-reverse.sh"

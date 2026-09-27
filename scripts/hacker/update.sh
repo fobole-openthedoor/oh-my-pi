@@ -89,6 +89,11 @@ if [ -f "$KIT/install-web.sh" ]; then
   sh "$KIT/install-web.sh" || \
     echo "omp-update: web toolchain failed (non-fatal)" >&2
 fi
+if [ -f "$KIT/install-apk.sh" ]; then
+  echo "omp-update: apk reverse sidecar"
+  sh "$KIT/install-apk.sh" || \
+    echo "omp-update: apk sidecar failed (non-fatal)" >&2
+fi
 
 echo "omp-update: now $(git log -1 --oneline)"
 echo "omp-update: restart omp to load the new tree"

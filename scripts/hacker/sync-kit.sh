@@ -11,6 +11,7 @@ ENV_FILE="${OMP_ENV:-$HOME/.config/omp/env}"
 LAUNCHER_DIR="${OMP_LAUNCHER_DIR:-/usr/local/bin}"
 GHIDRA_HOME="${GHIDRA_INSTALL_DIR:-${GHIDRA_HOME:-$HOME/tools/ghidra}}"
 REVERSE_SKILL_ROOT="${REVERSE_SKILL_ROOT:-$HOME/tools/reverse-skill}"
+APK_REVERSE_ROOT="${APK_REVERSE_ROOT:-$HOME/tools/apk-reverse}"
 CLAUDE_RED_ROOT="${CLAUDE_RED_ROOT:-$HOME/tools/claude-red}"
 JAVA_HOME_VAL="${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}"
 
@@ -63,6 +64,7 @@ pick_launcher_dir() {
 }
 
 mkdir -p "$AGENT_DIR/skills" "$AGENT_DIR/extensions" "$(dirname "$ENV_FILE")"
+ensure_env APK_REVERSE_ROOT "$APK_REVERSE_ROOT"
 ensure_env DOMAIN_ROUTE "${DOMAIN_ROUTE:-1}"
 ensure_env DOMAIN_ROUTE_GATE "${DOMAIN_ROUTE_GATE:-1}"
 ensure_env DROP_DEGENERATE_THINKING "${DROP_DEGENERATE_THINKING:-1}"
@@ -102,7 +104,8 @@ python3 "$KIT/sync-user-memory.py" \
   --fork-root "$PREFIX" \
   --claude-red-root "$CLAUDE_RED_ROOT" \
   --reverse-root "$REVERSE_SKILL_ROOT" \
-  --ghidra "$GHIDRA_HOME"
+  --ghidra "$GHIDRA_HOME" \
+  --apk-reverse-root "$APK_REVERSE_ROOT"
 
 MCP_CMD="$(command -v re-mcp-ghidra 2>/dev/null || true)"
 if [ -z "$MCP_CMD" ] && [ -x "$HOME/.local/bin/re-mcp-ghidra" ]; then

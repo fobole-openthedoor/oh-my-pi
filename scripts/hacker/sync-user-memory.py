@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def work_mode(fork_root: str, reverse_root: str, ghidra: str) -> str:
+def work_mode(fork_root: str, reverse_root: str, ghidra: str, apk_reverse: str) -> str:
     route = f"{fork_root}/scripts/hacker/skills/domain-route.py"
     return f"""## Work mode: 逆向 / 破解 / 渗透
 
@@ -26,6 +26,8 @@ The `domain-route` extension injects this and blocks bash/write/edit/scan until 
 Do not mix packs on the first turn. Reverse a binary then pentest the service → 逆向/破解 first, 渗透 second. 「破解网站」 is pentest; 「破解软件/授权/壳」 is crack.
 
 Reverse pack: `{reverse_root}` (`REVERSE_SKILL_ROOT`). Ghidra: `{ghidra}` (`analyzeHeadless`). Local sample: `/ghidra-open <binary>` (or tool `ghidra_open`), then MCP `open_database` with that file_path.
+
+Android APK depth — packer, repack, code that is not plain dex, Dart AOT, split APK — is the sidecar `{apk_reverse}` (`APK_REVERSE_ROOT`). The reverse-skill and crack adapters open it. Same domain, separate clone.
 """
 
 
@@ -76,6 +78,10 @@ def main() -> int:
         or os.environ.get("GHIDRA_HOME")
         or str(Path.home() / "tools" / "ghidra"),
     )
+    parser.add_argument(
+        "--apk-reverse-root",
+        default=os.environ.get("APK_REVERSE_ROOT", str(Path.home() / "tools" / "apk-reverse")),
+    )
     args = parser.parse_args()
     path = Path(args.agents_md)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -90,7 +96,7 @@ def main() -> int:
     text = upsert_section(
         text,
         "Work mode: 逆向 / 破解 / 渗透",
-        work_mode(args.fork_root, args.reverse_root, args.ghidra),
+        work_mode(args.fork_root, args.reverse_root, args.ghidra, args.apk_reverse_root),
     )
     text = upsert_section(text, "Claude-Red skills", claude_red_section(args.claude_red_root))
     text = re.sub(r"## claude-red\b.*?(?=\n## |\Z)", "", text, count=1, flags=re.S)

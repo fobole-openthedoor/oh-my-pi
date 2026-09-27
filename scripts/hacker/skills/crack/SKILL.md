@@ -18,6 +18,7 @@ Authorized local-sample / lab work only. No live-target ACT without written scop
 3. If PRIMARY is `pentest-tools/` or `attack-chain/`, use `$REVERSE_SKILL_ROOT/skills/reverse-engineering/SKILL.md` instead.
 4. `NOW`: `bash $REVERSE_SKILL_ROOT/skills/scripts/case-init.sh --hint "<user task>"` → `work/<case>/scope.md`. Local sample → `offline-sample` preset.
 5. `ACT`: Open `$REVERSE_SKILL_ROOT/skills/<PRIMARY>/SKILL.md` and follow ACTION REQUIRED.
+   When the sample is an APK, AAB, or dex, read `$APK_REVERSE_ROOT/skills/apk-reverse/SKILL.md` (default `$HOME/tools/apk-reverse`) through the symptom index and gates before editing. Equal-length dex edits and repack rules live there. Open `ad-removal.md`, `membership-and-limits.md`, `updates-and-forced-upgrade.md`, or the kernel syscall-mask notes only when the user asked for that result. A server-side gate ends as a report. Keep `observed` / `inferred` / `unverified`.
 6. Tools only from `$REVERSE_SKILL_ROOT/skills/tool-index.md`.
 
 Ghidra: `$GHIDRA_INSTALL_DIR` (`analyzeHeadless`). Local sample: `/ghidra-open <binary>` or tool `ghidra_open`, then MCP `open_database` with that file_path.

@@ -16,6 +16,8 @@ Do not mix packs on the first turn. Reverse a binary then pentest the service �
 
 Reverse pack: `__REVERSE_SKILL_ROOT__` (`REVERSE_SKILL_ROOT`). Ghidra: `__GHIDRA_HOME__` (`analyzeHeadless`). Local sample: `/ghidra-open <binary>` (or tool `ghidra_open`), then MCP `open_database` with that file_path.
 
+Android APK depth — packer, repack, code that is not plain dex, Dart AOT, split APK — is the sidecar `__APK_REVERSE_ROOT__` (`APK_REVERSE_ROOT`). The reverse-skill and crack adapters open it. Same domain, separate clone.
+
 ## Claude-Red skills
 
 The Claude-Red pack is installed as normal omp skills (`offensive-sqli`, `offensive-jwt`, `offensive-k8s-attacks`, …). Pack root: `__CLAUDE_RED_ROOT__` (`CLAUDE_RED_ROOT`).

@@ -159,6 +159,13 @@ if [ "${OMP_SKIP_WEB:-0}" != "1" ] && [ -f "$KIT/install-web.sh" ]; then
   fi
 fi
 
+if [ "${OMP_SKIP_APK:-0}" != "1" ] && [ -f "$KIT/install-apk.sh" ]; then
+  echo "omp-install: apk reverse sidecar"
+  if ! sh "$KIT/install-apk.sh"; then
+    echo "omp-install: apk sidecar failed (non-fatal; retry $KIT/install-apk.sh)" >&2
+  fi
+fi
+
 echo "omp-install: done"
 echo "omp-install: $PREFIX @ $(git -C "$PREFIX" log -1 --oneline)"
 echo "omp-install: set OPENAI_API_KEY in $ENV_FILE (beefsms), then: omp"
