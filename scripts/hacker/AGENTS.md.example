@@ -1,0 +1,34 @@
+# omp user memory
+
+## Work mode: 逆向 / 破解 / 渗透
+
+Load a domain skill only when the user explicitly requests a matching activity or names its tools. General coding, configuration, model/provider changes, questions, and greetings do not need a domain pack.
+
+Do not infer a domain from a filename, URL, or generic words such as “program”, “patch”, or “so”. If the intent is uncertain or spans multiple domains, skip the skill; the user can invoke one explicitly.
+
+The `domain-route` extension gives advisory hints only by default and does not block tools (`DOMAIN_ROUTE=0` disables hints; `DOMAIN_ROUTE_GATE=1` opts into blocking).
+
+For explicit authorized web pentests, `parallel-pentest` asks whether to stay single-threaded or use 2/3/4 lanes. The choice is session-local and never grants authorization. `/parallel-pentest` opens the selector manually; `PARALLEL_PENTEST=0` disables the prompt.
+
+| Domain | Explicit task | Skill |
+| --- | --- | --- |
+| 逆向 reverse | 反编译, 样本分析, Ghidra, IDA, Frida | `skill://reverse-skill` |
+| 破解 crack | 脱壳, 去校验, 二进制补丁, 激活/授权, 加壳, OLLVM | `skill://crack` |
+| 渗透 pentest | 打站, SQLi, XSS, 内网, AD, 口令, 打点, 绕过 WAF | matching `skill://offensive-*` |
+| CVE intelligence | CVE 编号, N-day, EPSS, KEV, OSV, 漏洞优先级 | `skill://cve-intel` |
+
+Reverse pack: `__REVERSE_SKILL_ROOT__` (`REVERSE_SKILL_ROOT`). Ghidra: `__GHIDRA_HOME__` (`analyzeHeadless`). Local sample: `/ghidra-open <binary>` (or tool `ghidra_open`), then MCP `open_database` with that file_path. `decompile_function` returns at most 200 lines by default; read its `evidence_path` for other pages instead of decompiling again, or use `detail=complete` for full inline output.
+
+Android APK depth — packer, repack, code that is not plain dex, Dart AOT, split APK — is the sidecar `__APK_REVERSE_ROOT__` (`APK_REVERSE_ROOT`). The reverse-skill and crack adapters open it. Same domain, separate clone.
+
+## Claude-Red skills
+
+The Claude-Red pack is installed as normal omp skills (`offensive-sqli`, `offensive-jwt`, `offensive-k8s-attacks`, …). Pack root: `__CLAUDE_RED_ROOT__` (`CLAUDE_RED_ROOT`).
+
+For an explicit pentest task, read only the matching offensive skill. `/skill:claude-red` is just a catalog; do not load it when no specific skill matches.
+
+## Web search
+
+Do **not** curl `127.0.0.1:8399`, `grok-search`, or `systemctl grok-search`. That service is gone.
+
+For news / current web info, use the built-in **web_search** tool. Use **read** on a URL to fetch a page. Do not invent a local search API.

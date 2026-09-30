@@ -33,10 +33,10 @@ Paste the next block to any terminal AI. It must install the **full** kit under 
 ## 目标终态（按路径验收，脚本叫什么就装什么）
 
 - CLI：本 fork 的 `omp`，分支 `main`。
-- 供应商：`OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`，provider id `beefsms`，`modelProviderOrder: [beefsms]`。模型 `happy/kimi-k3` / `happy/glm-5.3` / `happy/glm-5.3-plus` / `happy/qwen-3.8-fast` / `deepseek-flash`。`modelRoles.default` 必须是 `beefsms/happy/glm-5.3-plus`；`modelRoles.smol` 和 `modelRoles.compact` 必须是 `beefsms/deepseek-flash`；`modelRoles.vision` 必须是 `beefsms/deepseek-flash:low`；不要预置 `modelRoles.slow`。
+- 供应商：`OPENAI_BASE_URL=http://openai.beefsms.com:38888/v1`，provider id `beefsms`，`modelProviderOrder: [beefsms]`。模型 `happy/Deepseek-v4.1-Flash-1017` / `happy/Daybreak-Latest` / `happy/glm-5.3-plus` / `deepseek-flash`。`modelRoles.default` 必须是 `beefsms/happy/Deepseek-v4.1-Flash-1017`；`modelRoles.smol` 和 `modelRoles.compact` 必须是 `beefsms/deepseek-flash`；`modelRoles.vision` 必须是 `beefsms/deepseek-flash:low`；不要预置 `modelRoles.slow`。
 - Key：TUI 里 `/login beefsms`。也可写 `~/.config/omp/env` 的 `BEEFSMS_API_KEY` 或 `OPENAI_API_KEY`。仓库只有占位符。
 - 必须跑完：`scripts/hacker/install.sh`（内含 `install-apk.sh`）、`install-claude-red.sh`（若 install.sh 跳过了）、`install-reverse.sh`。已有机器更新走 `update.sh`，它也会再跑 `install-apk.sh`。
-- 装完应存在：`$HOME/tools/claude-red` 且 `offensive-*` symlink 进 `$HOME/.omp/agent/skills/`；`$HOME/tools/reverse-skill`；`$HOME/tools/apk-reverse`；`$HOME/tools/ghidra`（12.1.3 PUBLIC，`analyzeHeadless`）；jadx 1.5.6；droidasc 0.1.1.post2；ddc 0.1.15；apksigner；zipalign；`re-mcp-ghidra` stdio；`~/.omp/agent/skills/{reverse-skill,crack,claude-red}/SKILL.md`；extensions：`beefsms-kimi-thinking.ts`、`beefsms-provider.ts`、`domain-route.ts`、`ghidra-open.ts`、`drop-degenerate-thinking.ts`；`~/.omp/agent/rules/no-telegraph.md`。
+- 装完应存在：`$HOME/tools/claude-red` 且 `offensive-*` symlink 进 `$HOME/.omp/agent/skills/`；`$HOME/tools/reverse-skill`；`$HOME/tools/apk-reverse`；`$HOME/tools/ghidra`（12.1.3 PUBLIC，`analyzeHeadless`）；jadx 1.5.6；droidasc 0.1.1.post2；ddc 0.1.15；apksigner；zipalign；`re-mcp-ghidra` stdio；`~/.omp/agent/skills/{reverse-skill,crack,claude-red,cve-intel}/SKILL.md`；extensions：`beefsms-kimi-thinking.ts`、`beefsms-provider.ts`、`domain-route.ts`、`parallel-pentest.ts`、`ghidra-open.ts`、`drop-degenerate-thinking.ts`；`~/.omp/agent/rules/no-telegraph.md`。
 - `~/.omp/agent/mcp.json` 的 ghidra 为 stdio（`re-mcp-ghidra stdio`，env：GHIDRA_INSTALL_DIR / GHIDRA_HOME / JAVA_HOME）。不要改用 HTTP :8765。
 - 版本只准来自 `scripts/hacker/reverse-versions.env`（Ghidra zip sha256 必须是 `93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54`）。
 - 启动器：`scripts/hacker/launch.sh`，避免 `~/.bashrc` 里其它 `OPENAI_BASE_URL` 漏进来。
@@ -59,10 +59,10 @@ Paste the next block to any terminal AI. It must install the **full** kit under 
 - OPENAI_BASE_URL（应是 beefsms）；`/login beefsms`；key 是否已填（只答 是/否）
 - java 21、analyzeHeadless、jadx、r2、re-mcp-ghidra、droidasc、ddc、apksigner、zipalign
 - `$HOME/tools/reverse-skill`、tool-index.md、`$HOME/tools/apk-reverse`
-- adapters：`skills/reverse-skill`、`skills/crack`；offensive-sqli symlink
+- adapters：`skills/reverse-skill`、`skills/crack`、`skills/cve-intel`；offensive-sqli symlink
 - mcp.json ghidra 为 stdio
 - 上列 extensions 与 `rules/no-telegraph.md`
-- `domain-route.py --self-test`、`ghidra-open.sh --dry-run`
+- `domain-route.py --self-test`、`cve-intel.py --self-test`、`ghidra-open.sh --dry-run`
 - verify-reverse.sh / verify-claude-red.sh 退出码
 ```
 
