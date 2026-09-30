@@ -763,7 +763,7 @@ const tokenRateSegment: StatusLineSegment = {
 
 		const content = formatMetric({
 			leading: theme.icon.throughput || undefined,
-			value: `${tokensPerSecond.toFixed(1)} tok/s`,
+			value: `${tokensPerSecond.toFixed(1)} ts`,
 		});
 		return { content: theme.fg("statusLineOutput", content ?? ""), visible: true };
 	},
@@ -776,6 +776,31 @@ const tokenRateSegment: StatusLineSegment = {
 			icon: "throughput",
 			motion: [node("rate", { value: Number(tokensPerSecond.toFixed(1)), unit: "tok/s" }, undefined, "rate")],
 		};
+	},
+};
+
+function formatTtft(ms: number): string {
+	if (ms < 1000) return `${Math.round(ms)}ms`;
+	if (ms < 10_000) return `${(ms / 1000).toFixed(1)}s`;
+	return `${Math.round(ms / 1000)}s`;
+}
+
+const ttftSegment: StatusLineSegment = {
+	id: "ttft",
+	render(ctx) {
+		const ttftMs = ctx.usageStats.ttftMs;
+		if (!ttftMs || ttftMs <= 0) return { content: "", visible: false };
+
+		const content = formatMetric({
+			leading: theme.icon.time || undefined,
+			value: `ttft ${formatTtft(ttftMs)}`,
+		});
+		return { content: theme.fg("statusLineOutput", content ?? ""), visible: true };
+	},
+	describe(ctx) {
+		const ttftMs = ctx.usageStats.ttftMs;
+		if (!ttftMs || ttftMs <= 0) return null;
+		return segView([span(`ttft ${formatTtft(ttftMs)}`, "statusLineOutput")], "time");
 	},
 };
 
@@ -1287,6 +1312,7 @@ export const SEGMENTS: Record<StatusLineSegmentId, StatusLineSegment> = {
 	token_out: tokenOutSegment,
 	token_total: tokenTotalSegment,
 	token_rate: tokenRateSegment,
+	ttft: ttftSegment,
 	cost: costSegment,
 	context_pct: contextPctSegment,
 	context_total: contextTotalSegment,

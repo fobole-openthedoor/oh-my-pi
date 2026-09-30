@@ -159,7 +159,7 @@ export const cfgStatusLinePreset = register({
 		label: "Status Line Preset",
 		description: "Pre-built status line configurations",
 		options: [
-			{ value: "default", label: "Default", description: "Model, path, git, context, tokens, cost" },
+			{ value: "default", label: "Default", description: "Model, path, git, context, cache, ttft, tok/s, cost" },
 			{ value: "minimal", label: "Minimal", description: "Path and git only" },
 			{ value: "compact", label: "Compact", description: "Model, git, cost, context" },
 			{ value: "full", label: "Full", description: "All segments including time" },

@@ -711,6 +711,8 @@ export class StatusLineComponent<TSession extends StatusLineSession = StatusLine
 	#defaultBranchCwd: string | undefined = undefined;
 	#lastTokensPerSecond: number | null = null;
 	#lastTokensPerSecondTimestamp: number | null = null;
+	#lastTtftMs: number | null = null;
+	#lastTtftTimestamp: number | null = null;
 
 	// Provider usage caching (5-min TTL, OAuth/sub only)
 	#cachedUsage: {
@@ -1363,6 +1365,8 @@ export class StatusLineComponent<TSession extends StatusLineSession = StatusLine
 		this.#contextUsageCache = undefined;
 		this.#lastTokensPerSecond = null;
 		this.#lastTokensPerSecondTimestamp = null;
+		this.#lastTtftMs = null;
+		this.#lastTtftTimestamp = null;
 	}
 
 	/**
@@ -1781,6 +1785,36 @@ export class StatusLineComponent<TSession extends StatusLineSession = StatusLine
 		// its sticky per-assistant-message cache so the badge doesn't flicker
 		// off in the brief gap between stream end and the finalized message.
 		return this.#getMainSessionTokensPerSecond();
+	}
+
+	#getTtftMs(): number | null {
+		let lastAssistantTimestamp: number | null = null;
+		for (let i = this.session.state.messages.length - 1; i >= 0; i--) {
+			const message = this.session.state.messages[i];
+			if (message?.role === "assistant") {
+				lastAssistantTimestamp = message.timestamp;
+				break;
+			}
+		}
+
+		if (lastAssistantTimestamp === null) {
+			this.#lastTtftMs = null;
+			this.#lastTtftTimestamp = null;
+			return null;
+		}
+
+		const ttftMs = this.host.calculateTtftMs(this.session.state.messages, this.session.isStreaming);
+		if (ttftMs !== null) {
+			this.#lastTtftMs = ttftMs;
+			this.#lastTtftTimestamp = lastAssistantTimestamp;
+			return ttftMs;
+		}
+
+		if (this.#lastTtftTimestamp === lastAssistantTimestamp) {
+			return this.#lastTtftMs;
+		}
+
+		return null;
 	}
 
 	/**
@@ -2331,6 +2365,7 @@ export class StatusLineComponent<TSession extends StatusLineSession = StatusLine
 		const usageStats = {
 			...aggregateUsageStats,
 			tokensPerSecond: this.#getTokensPerSecond(),
+			ttftMs: this.#getTtftMs(),
 		};
 
 		let contextWindow = state.model?.contextWindow ?? this.session.model?.contextWindow ?? 0;
