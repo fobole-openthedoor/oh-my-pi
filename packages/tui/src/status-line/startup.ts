@@ -92,6 +92,7 @@ export function createStartupStatusLine(data: StatusLineStartupData): StatusLine
 		resolveActiveRepo: () => null,
 		lookupPullRequest: async () => ({ stdout: "", exitCode: 1 }),
 		calculateTokensPerSecond: () => null,
+		calculateTtftMs: () => null,
 		limitMatchesActiveAccount: () => false,
 		computeCompactionBoundaries: () => data.compactionBoundaries,
 	};
