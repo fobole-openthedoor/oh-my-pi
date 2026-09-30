@@ -31,7 +31,7 @@ on:
          - "patches/**"
          - ".github/**"
    pull_request:
-      branches: [main, omp2]
+      branches: [main]
       paths:
          - "packages/**"
          - "crates/**"
@@ -77,11 +77,8 @@ concurrency:
 
 env:
    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-   # native_addons builds the pair TS jobs need; native_addons_cross builds the
-   # rest. Together they must equal //:natives-linux-all (checked in the cross
    # job), so a filegroup addition cannot silently skip both.
    NATIVES_X64_TARGETS: natives-linux-x64-baseline natives-linux-x64-modern
-   NATIVES_CROSS_TARGETS: natives-linux-arm64 natives-linux-musl-arm64 natives-linux-musl-x64-baseline natives-win32-arm64 natives-win32-x64-baseline
    # Per-test wall-clock ceiling (seconds) for scripts/ci-test-ts.ts. omp-kata
    # runners with reclaim_guest_freed_memory (infra/tune-kata-runtime.sh) run
    # the SQLite/subprocess-heavy coding-agent suites 1.5-2x slower, which put
@@ -507,61 +504,6 @@ jobs:
    # ahead of it: serially after the pair they held every test job back ~10
    # min on native-changing main pushes. Non-PR only, like rust_validate;
    # the build also keeps the remote cache warm for release runs.
-   native_addons_cross:
-      name: Build native addons (bazel, cross targets)
-      if: github.event_name != 'pull_request'
-      runs-on: omp-kata
-      steps:
-         - uses: actions/checkout@v4
-         - id: cache
-           uses: ./.github/actions/bazel-cache
-           with:
-              scope: linux
-         - name: Build cross-target native addons
-           run: |
-              set -eo pipefail
-              if [ "$(ulimit -Sn)" != unlimited ] && [ "$(ulimit -Sn)" -lt 65536 ]; then ulimit -Sn 65536 || true; fi
-              # One addon per invocation, for the OOM reason in native_addons.
-              : > "$RUNNER_TEMP/bazel-build.log"
-              for target in $NATIVES_CROSS_TARGETS; do
-                bazelisk --bazelrc="${{ steps.cache.outputs.rc }}" build "//:$target" 2>&1 | tee -a "$RUNNER_TEMP/bazel-build.log"
-              done
-         # The two jobs' target lists must together cover //:natives-linux-all
-         # exactly; a target added to the filegroup but to neither list would
-         # otherwise silently never build or ship. cquery, not query: the rc's
-         # --config=ci is defined for build only, which cquery inherits and
-         # query rejects; this also reuses the warm server.
-         - name: Check addon target lists cover natives-linux-all
-           run: |
-              set -euo pipefail
-              read -r -a listed <<< "$NATIVES_X64_TARGETS $NATIVES_CROSS_TARGETS"
-              expected="$(printf '%s\n' "${listed[@]}" | sort)"
-              actual="$(bazelisk --bazelrc="${{ steps.cache.outputs.rc }}" cquery 'labels(srcs, //:natives-linux-all)' 2>"$RUNNER_TEMP/query.err" | sed -E 's/ \(.*\)$//; s/.*://' | sort)" || {
-                cat "$RUNNER_TEMP/query.err"
-                exit 1
-              }
-              if [ "$expected" != "$actual" ]; then
-                echo "::error title=Native addon target lists::NATIVES_X64_TARGETS + NATIVES_CROSS_TARGETS must equal //:natives-linux-all srcs"
-                diff <(echo "$expected") <(echo "$actual") || true
-                exit 1
-              fi
-         - name: Report bazel cache stats
-           shell: bash
-           run: |
-              summary=$(sed -E 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/bazel-build.log" | grep -E '[0-9]+ processes:' | tail -1 || true)
-              echo "::notice title=Bazel build summary::${summary:-no process summary found}"
-         # Everything except the linux-x64 pair, which native_addons ships as
-         # its own small `natives-linux-x64` artifact.
-         - name: Upload remaining native addon artifacts
-           uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-           with:
-              name: native-addons
-              path: |
-                 bazel-bin/natives-*/*.node
-                 !bazel-bin/natives-linux-x64-*/*.node
-              if-no-files-found: error
-              retention-days: 1
-
    test_coding_agent_native:
       name: "Test coding-agent native/unit (TS) ${{ matrix.shard }}"
       runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'omp-kata' }}
@@ -731,7 +673,6 @@ jobs:
       if: ${{ needs.release_metadata.outputs.is-release == 'true' && !cancelled() &&
          needs.rust_validate.result == 'success' &&
          needs.native_addons.result == 'success' &&
-         needs.native_addons_cross.result == 'success' &&
          needs.test_workspace.result == 'success' &&
          needs.test_coding_agent_singleton.result == 'success' &&
          needs.test_ts_native.result == 'success' &&
@@ -740,7 +681,7 @@ jobs:
          needs.test_coding_agent_native.result == 'success' &&
          needs.test_smoke.result == 'success' && needs.check.result == 'success' &&
          needs.install_methods.result == 'success' }}
-      needs: [release_metadata, check, rust_validate, native_addons, native_addons_cross, test_workspace, test_coding_agent_singleton, test_ts_native, test_coding_agent_ui, test_coding_agent_runtime, test_coding_agent_native, test_smoke, install_methods]
+      needs: [release_metadata, check, rust_validate, native_addons, test_workspace, test_coding_agent_singleton, test_ts_native, test_coding_agent_ui, test_coding_agent_runtime, test_coding_agent_native, test_smoke, install_methods]
       runs-on: ubuntu-22.04
       steps:
          - uses: actions/checkout@v4
@@ -762,8 +703,7 @@ jobs:
       name: "Release binary: ${{ matrix.target_id }}"
       if: ${{ needs.release_metadata.outputs.is-release == 'true' && !cancelled() &&
          needs.native_addons.result == 'success' &&
-         needs.native_addons_cross.result == 'success' }}
-      needs: [release_metadata, native_addons, native_addons_cross]
+      needs: [release_metadata, native_addons]
       strategy:
          fail-fast: false
          matrix:
@@ -809,17 +749,6 @@ jobs:
                     target_id: win32-x64,
                     binary_path: packages/coding-agent/binaries/omp-windows-x64.exe,
                     native_targets: win32-x64-baseline,
-                 }
-               # Addon cross-built by Bazel (clang-cl + xwin arm64 splat) in
-               # native_addons_cross, binary cross-compiled by bun; the
-               # release_smoke_win32_arm64 job runs it on real hardware.
-               - {
-                    os: ubuntu-22.04,
-                    platform: win32,
-                    arch: arm64,
-                    target_id: win32-arm64,
-                    binary_path: packages/coding-agent/binaries/omp-windows-arm64.exe,
-                    native_targets: win32-arm64,
                  }
       runs-on: ${{ matrix.os }}
       permissions:
@@ -1016,46 +945,14 @@ jobs:
    # win32-arm64 is cross-built on Linux (addon: Bazel msvc arm64 toolchain;
    # binary: bun --compile); this runs it on real Windows ARM64 hardware
    # before anything publishes. Replaces the ~13-20 min native cargo leg.
-   release_smoke_win32_arm64:
-      name: "Smoke release binary: win32-arm64"
-      if: ${{ needs.release_metadata.outputs.is-release == 'true' && !cancelled() &&
-         needs.release_binary.result == 'success' }}
-      needs: [release_metadata, release_binary]
-      runs-on: windows-11-arm
-      permissions:
-         contents: read
-      steps:
-         - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-           with:
-              name: omp-binary-win32-arm64
-              path: packages/coding-agent/binaries
-         - name: Smoke release binary (Windows)
-           shell: pwsh
-           run: |
-              $runtimeDir = Join-Path $env:RUNNER_TEMP "omp-smoke"
-              $env:HOME = Join-Path $runtimeDir "home"
-              $env:USERPROFILE = $env:HOME
-              $env:LOCALAPPDATA = Join-Path $runtimeDir "local"
-              $env:XDG_DATA_HOME = Join-Path $runtimeDir "xdg"
-              New-Item -ItemType Directory -Force -Path $env:HOME, $env:LOCALAPPDATA, $env:XDG_DATA_HOME | Out-Null
-              & "packages/coding-agent/binaries/omp-windows-arm64.exe" --version
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-              & "packages/coding-agent/binaries/omp-windows-arm64.exe" --smoke-test
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-   # Publishes the six @oh-my-pi/pi-natives-<tag> leaf packages once
-   # validation passes and every binary built. Runs on one linux runner: leaf
-   # publishing is platform-agnostic file packaging (gen-npm-packages reads
-   # packages/natives/native), so no per-platform runners are needed.
    release_native_leaves:
       name: Publish native leaf packages
       if: ${{ needs.release_metadata.outputs.is-release == 'true' && !cancelled() &&
          needs.release_gate.result == 'success' &&
          needs.release_binary.result == 'success' &&
          needs.release_binary_hosted.result == 'success' &&
-         needs.release_smoke_win32_arm64.result == 'success' &&
          !inputs.skip_npm }}
-      needs: [release_metadata, release_gate, release_binary, release_binary_hosted, release_smoke_win32_arm64]
+      needs: [release_metadata, release_gate, release_binary, release_binary_hosted]
       runs-on: ubuntu-22.04
       # id-token lets npm mint the OIDC token for trusted publishing; the
       # NODE_AUTH_TOKEN below is the fallback for unconfigured packages.
@@ -1095,7 +992,7 @@ jobs:
          - name: Install linux and win32-x64 native addons
            uses: ./.github/actions/native-artifacts
            with:
-              targets: linux-x64-baseline linux-x64-modern linux-arm64 win32-x64-baseline win32-arm64
+              targets: linux-x64-baseline linux-x64-modern linux-arm64 win32-x64-baseline
          # Native-host addons come flat (canonical filenames) from the
          # release_binary_hosted legs.
          - name: Install native-host addons
@@ -1120,7 +1017,7 @@ jobs:
               set -uo pipefail
               logs="$RUNNER_TEMP/native-leaf-logs"
               mkdir -p "$logs"
-              tags=(linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64 win32-arm64)
+              tags=(linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64)
               pids=()
               for tag in "${tags[@]}"; do
                 bun run ci:release:publish-native-leaf "$tag" >"$logs/$tag.log" 2>&1 &
@@ -1150,8 +1047,7 @@ jobs:
          needs.release_gate.result == 'success' &&
          needs.release_binary.result == 'success' &&
          needs.release_binary_hosted.result == 'success' &&
-         needs.release_smoke_win32_arm64.result == 'success' }}
-      needs: [release_metadata, release_gate, release_binary, release_binary_hosted, release_smoke_win32_arm64]
+      needs: [release_metadata, release_gate, release_binary, release_binary_hosted]
       runs-on: ubuntu-22.04
       permissions:
          contents: write
@@ -1240,14 +1136,13 @@ jobs:
       if: ${{ needs.release_metadata.outputs.is-release == 'true' && !cancelled() &&
          needs.release_binary.result == 'success' &&
          needs.release_binary_hosted.result == 'success' &&
-         needs.release_smoke_win32_arm64.result == 'success' &&
          needs.release_github_verify.result == 'success' &&
          needs.release_native_leaves.result == 'success' &&
          !inputs.skip_npm }}
       # release_native_leaves must finish first: the core package lists the
       # leaf packages as lockstep-versioned optionalDependencies, so installs
       # resolve them the moment the core version is live.
-      needs: [release_metadata, release_binary, release_binary_hosted, release_smoke_win32_arm64, release_github_verify, release_native_leaves]
+      needs: [release_metadata, release_binary, release_binary_hosted, release_github_verify, release_native_leaves]
       runs-on: ubuntu-22.04
       # `id-token: write` lets npm mint the GitHub OIDC token it exchanges for a
       # short-lived publish token (trusted publishing + provenance). When a
