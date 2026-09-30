@@ -65,3 +65,20 @@ bash skills/scripts/refresh-tool-index.sh        # 重新生成探测表
 angr 10.0.0 / keystone-engine 0.9.2 / lief 1.0.0 / pefile 2024.8.26(pip --user,PEP 668 需 `--break-system-packages`);unblob / ropper / semgrep(pipx);lldb(apt);dotnet SDK 8 在 `/root/.dotnet`,ilspycmd 9.1.0.7988(pin 死的,最新版包是坏的);Ghidra 12.1.3 在 `/root/tools/ghidra`(MCP 直连);SecLists 在 `/root/tools/SecLists`。
 
 新工具要让别人受益:加进 reverse-skill 的 `skills/scripts/bootstrap-manifest.json` + `bootstrap-reverse.sh` + `refresh-tool-index.sh`(kali/ 和 ps1 保持 parity),跑通测试后推 fork。
+
+## Ghidra MCP 性能(kimi-code 侧,已调优)
+
+架构事实(pi-ghidra):**每次 MCP 调用都是新 JVM**(无常驻进程);查询走 `-noanalysis` 但仍要付 JVM 启动 + 项目打开(约 5-10s 地板价);首次 import + 自动分析按 SHA-256 缓存到 `/root/pi-ghidra-cache`,同样本只做一次。
+
+已落地的调优(2026-09-30):
+
+- `/root/.kimi-code/mcp.json` env 加了 `PI_GHIDRA_CPUS=4`(分析并行度默认 2,8 核机器拉到 clamp 上限 4)
+- `/root/tools/ghidra/support/launch.properties` 尾部 pin 了 `VMARGS=-Xmx8G`
+- 预热脚本 `scripts/hacker/ghidra-prewarm.py`:对目录/文件做后台首析,讲 MCP JSON-RPC、走与 agent 完全相同的 wrapper,产物即 agent 会命中的缓存。用法:
+  ```bash
+  nohup python3 /root/oh-my-pi/scripts/hacker/ghidra-prewarm.py <样本目录> > /tmp/ghidra-prewarm.log 2>&1 &
+  ```
+  拿到一批新样本时先挂预热,同时用 file/checksec/rabin2 做快查,深分析开始时缓存已热。实测 /bin/ls 首析 21s,缓存命中后 5.9s(地板价)。
+- 相关查询永远用 MCP `batch` 打包(单 JVM 最多 50 个操作),别逐个发。
+
+注意:omp 侧的 Ghidra MCP 是另一个实现(`re-mcp-ghidra`,见 `~/.omp/agent/mcp.json`),这套调优不适用于它。
