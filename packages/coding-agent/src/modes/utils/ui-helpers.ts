@@ -1075,10 +1075,13 @@ export class UiHelpers {
 		const title = "Update Available";
 		const prefix = `New version ${newVersion} is available. Run: `;
 		const command = "omp update";
+		const forkPrefix = "特供版 omp 请使用 ";
+		const forkCommand = "~/oh-my-pi/scripts/hacker/update.sh";
+		const forkSuffix = " 执行升级";
 		block.addChild(
-			new Text(`${title}\n${prefix}${command}`, 1, 0).setStyleFn(
+			new Text(`${title}\n${prefix}${command}\n${forkPrefix}${forkCommand}${forkSuffix}`, 1, 0).setStyleFn(
 				() =>
-					`${theme.bold(theme.fg("warning", title))}\n${theme.fg("muted", prefix)}${theme.fg("accent", command)}`,
+					`${theme.bold(theme.fg("warning", title))}\n${theme.fg("muted", prefix)}${theme.fg("accent", command)}\n${theme.fg("muted", forkPrefix)}${theme.fg("accent", forkCommand)}${theme.fg("muted", forkSuffix)}`,
 			),
 		);
 		block.addChild(new DynamicBorder(text => theme.fg("warning", text)));

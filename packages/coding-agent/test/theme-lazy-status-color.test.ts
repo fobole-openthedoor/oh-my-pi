@@ -121,7 +121,11 @@ describe("lazy status color re-resolves on theme switch", () => {
 		const semanticLines = Bun.stripANSI(lightOutput)
 			.split("\n")
 			.map(line => line.trim())
-			.filter(line => line === "Update Available" || line.startsWith("New version "));
-		expect(semanticLines).toEqual(["Update Available", "New version 1.2.3 is available. Run: omp update"]);
+			.filter(line => line === "Update Available" || line.startsWith("New version ") || line.startsWith("特供版"));
+		expect(semanticLines).toEqual([
+			"Update Available",
+			"New version 1.2.3 is available. Run: omp update",
+			"特供版 omp 请使用 ~/oh-my-pi/scripts/hacker/update.sh 执行升级",
+		]);
 	});
 });
