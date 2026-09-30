@@ -33,7 +33,10 @@ function run(args: string[], serial?: string): Result {
 				: `avs failed: ${err.message}`;
 		return { content: [{ type: "text", text: hint }], isError: true };
 	}
-	const text = [out.stdout, out.stderr].map(s => (s || "").trimEnd()).filter(Boolean).join("\n");
+	const text = [out.stdout, out.stderr]
+		.map(s => (s || "").trimEnd())
+		.filter(Boolean)
+		.join("\n");
 	// avs exits non-zero on every error (secure_or_black=3, others=1); surface
 	// it as a tool error so the model notices and reads the error= code.
 	return { content: [{ type: "text", text: text || "(no output)" }], isError: out.status !== 0 };
@@ -41,12 +44,16 @@ function run(args: string[], serial?: string): Result {
 
 export default function avsTools(pi: ExtensionAPI) {
 	const z = pi.zod;
-	const serial = z.string().describe("Device serial (required when several devices are attached; see avs_devices)").optional();
+	const serial = z
+		.string()
+		.describe("Device serial (required when several devices are attached; see avs_devices)")
+		.optional();
 
 	pi.registerTool({
 		name: "avs_devices",
 		label: "avs devices",
-		description: "List attached Android devices (serial, state, model) via ADB. Run this first when unsure which device or when several are connected.",
+		description:
+			"List attached Android devices (serial, state, model) via ADB. Run this first when unsure which device or when several are connected.",
 		parameters: z.object({}),
 		approval: "read",
 		async execute() {
@@ -61,7 +68,10 @@ export default function avsTools(pi: ExtensionAPI) {
 			"Read the current Android screen: prints numbered, tappable elements with device-pixel coordinates plus visible text. Always call this before avs_tap by id/text. On error=secure_or_black the screen is protected or locked — stop and tell the user, do not invent buttons. Uses the UI tree first and a vision model when the tree is blocked or a permission/install dialog is up.",
 		parameters: z.object({
 			serial,
-			force_vision: z.boolean().describe("Skip the UI tree and use the vision model only (rarely needed)").optional(),
+			force_vision: z
+				.boolean()
+				.describe("Skip the UI tree and use the vision model only (rarely needed)")
+				.optional(),
 		}),
 		approval: "read",
 		async execute(_id, params) {

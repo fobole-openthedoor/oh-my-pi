@@ -14,11 +14,7 @@ const GLM_COMPAT = {
 	requiresReasoningContentForToolCalls: true,
 };
 
-function textModel(
-	id: string,
-	name: string,
-	compat: NonNullable<ProviderModelConfig["compat"]>,
-): BeefsmsModel {
+function textModel(id: string, name: string, compat: NonNullable<ProviderModelConfig["compat"]>): BeefsmsModel {
 	return {
 		id,
 		name,
@@ -83,7 +79,7 @@ const MODELS: BeefsmsModel[] = [
 	},
 ];
 
-const MODELS_BY_ID = new Map(MODELS.map((model) => [model.id, model]));
+const MODELS_BY_ID = new Map(MODELS.map(model => [model.id, model]));
 
 function guessUnknownModel(id: string): BeefsmsModel {
 	const lower = id.toLowerCase();
@@ -123,7 +119,10 @@ function modelForId(id: string): BeefsmsModel {
 function parseModelIds(payload: unknown): string[] {
 	const rows = Array.isArray(payload)
 		? payload
-		: payload && typeof payload === "object" && "data" in payload && Array.isArray((payload as { data: unknown }).data)
+		: payload &&
+			  typeof payload === "object" &&
+			  "data" in payload &&
+			  Array.isArray((payload as { data: unknown }).data)
 			? (payload as { data: unknown[] }).data
 			: [];
 	const ids: string[] = [];
@@ -147,9 +146,7 @@ async function listGatewayIds(apiKey: string, signal?: AbortSignal): Promise<str
 	}
 	if (!response.ok) {
 		const body = await response.text().catch(() => "");
-		throw new Error(
-			`beefsms key check failed (HTTP ${response.status})${body ? `: ${body.slice(0, 200)}` : ""}`,
-		);
+		throw new Error(`beefsms key check failed (HTTP ${response.status})${body ? `: ${body.slice(0, 200)}` : ""}`);
 	}
 	return parseModelIds(await response.json());
 }
@@ -179,7 +176,10 @@ async function fetchLiveModels(apiKey: string | undefined): Promise<BeefsmsModel
 }
 
 function stripKey(raw: string): string {
-	return raw.trim().replace(/^bearer\b\s*/i, "").trim();
+	return raw
+		.trim()
+		.replace(/^bearer\b\s*/i, "")
+		.trim();
 }
 
 export default function (pi: ExtensionAPI) {
@@ -188,7 +188,7 @@ export default function (pi: ExtensionAPI) {
 		api: "openai-completions",
 		authHeader: true,
 		models: MODELS,
-		fetchDynamicModels: (apiKey) => fetchLiveModels(apiKey),
+		fetchDynamicModels: apiKey => fetchLiveModels(apiKey),
 		oauth: {
 			name: "beefsms",
 			async login(callbacks) {

@@ -27,7 +27,7 @@ function hasToolCalls(message: ChatMessage): boolean {
 }
 
 function rewriteKimiPayload(payload: ChatPayload, effort: string): ChatPayload {
-	const next: ChatPayload = { ...payload, messages: payload.messages?.map((message) => ({ ...message })) };
+	const next: ChatPayload = { ...payload, messages: payload.messages?.map(message => ({ ...message })) };
 	next.reasoning_effort = effort;
 	// K3 rejects the K2.x `thinking` object; effort is top-level only.
 	delete next.thinking;

@@ -26,15 +26,7 @@ type BranchEntry = {
 	};
 };
 
-const ALLOWED_TOOLS = new Set([
-	"read",
-	"grep",
-	"glob",
-	"todo",
-	"ask",
-	"web_search",
-	"ghidra_open",
-]);
+const ALLOWED_TOOLS = new Set(["read", "grep", "glob", "todo", "ask", "web_search", "ghidra_open"]);
 
 const BASH_ALLOW = [
 	"domain-route.py",
@@ -82,7 +74,7 @@ function stringFrom(value: unknown): string {
 	if (typeof value === "string") return value;
 	if (Array.isArray(value)) {
 		return value
-			.map((block) => {
+			.map(block => {
 				if (typeof block === "string") return block;
 				if (block && typeof block === "object" && "text" in block) {
 					return String((block as { text?: unknown }).text ?? "");
@@ -160,7 +152,7 @@ const AVS_COMMAND = /(^|[\s;|&(])(\S*\/)?avs(\s|$)/;
 
 function bashAllowed(command: string): boolean {
 	if (AVS_COMMAND.test(command)) return true;
-	return BASH_ALLOW.some((token) => command.includes(token));
+	return BASH_ALLOW.some(token => command.includes(token));
 }
 
 function toolAllowed(toolName: string, input: unknown): boolean {

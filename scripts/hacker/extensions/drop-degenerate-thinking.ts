@@ -39,7 +39,7 @@ export function isDegenerateThinking(text: unknown): boolean {
 	if (text.length < 48) return false;
 	const lines = text
 		.split(/\r?\n/)
-		.map((line) => line.trim())
+		.map(line => line.trim())
 		.filter(Boolean);
 	let run = 0;
 	let maxRun = 0;
@@ -99,7 +99,7 @@ export function stripDegenerateThinking(message: ChatMessage): boolean {
 export function dropDegenerateFromPayload(payload: ChatPayload): ChatPayload {
 	const messages = payload.messages;
 	if (!Array.isArray(messages)) return payload;
-	const next: ChatPayload = { ...payload, messages: messages.map((message) => ({ ...message })) };
+	const next: ChatPayload = { ...payload, messages: messages.map(message => ({ ...message })) };
 	for (const message of next.messages ?? []) {
 		if (message.role !== "assistant") continue;
 		stripDegenerateThinking(message);
@@ -111,7 +111,7 @@ export function dropDegenerateFromPayload(payload: ChatPayload): ChatPayload {
 }
 
 export default function (pi: ExtensionAPI) {
-	pi.on("before_provider_request", (event) => {
+	pi.on("before_provider_request", event => {
 		if (!envOn("DROP_DEGENERATE_THINKING")) return;
 		if (!event.payload || typeof event.payload !== "object") return;
 		return dropDegenerateFromPayload(event.payload as ChatPayload);

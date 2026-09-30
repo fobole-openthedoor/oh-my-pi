@@ -35,11 +35,11 @@ function runOpen(
 			stdout += text;
 			onChunk?.(text);
 		});
-		child.on("error", (err) => {
+		child.on("error", err => {
 			signal?.removeEventListener("abort", onAbort);
 			reject(err);
 		});
-		child.on("close", (code) => {
+		child.on("close", code => {
 			signal?.removeEventListener("abort", onAbort);
 			resolve({ code: code ?? 1, stdout });
 		});
@@ -99,7 +99,7 @@ export default function (pi: ExtensionAPI) {
 			if (params.force) args.unshift("--force");
 			if (params.no_analyze) args.unshift("--no-analyze");
 			onUpdate?.({ content: [{ type: "text", text: `ghidra-open ${params.path}` }] });
-			const { code, stdout } = await runOpen(args, signal, (chunk) => {
+			const { code, stdout } = await runOpen(args, signal, chunk => {
 				onUpdate?.({ content: [{ type: "text", text: chunk.slice(-2000) }] });
 			});
 			const summary = lastJson(stdout);
