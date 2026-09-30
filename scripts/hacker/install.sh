@@ -1,0 +1,175 @@
+#!/bin/sh
+# Install this oh-my-pi fork from git, then wire the omp launcher and seed a
+# key-less replica of the beefsms environment.
+# Does not install the upstream omp.sh binary. Does not write API keys.
+set -eu
+
+GIT_URL="${OMP_GIT_URL:-https://github.com/fobole-openthedoor/oh-my-pi.git}"
+BRANCH="${OMP_GIT_BRANCH:-main}"
+PREFIX="${OMP_FORK_ROOT:-$HOME/oh-my-pi}"
+LAUNCHER_DIR="${OMP_LAUNCHER_DIR:-/usr/local/bin}"
+ENV_FILE="${OMP_ENV:-$HOME/.config/omp/env}"
+AGENT_DIR="${OMP_AGENT_DIR:-$HOME/.omp/agent}"
+HERE="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+
+need() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "omp-install: missing $1" >&2
+    exit 1
+  fi
+}
+
+bun_new_enough() {
+  python3 - "$1" <<'PY'
+import sys
+ver = sys.argv[1].split("+", 1)[0]
+parts = []
+for bit in ver.split("."):
+    try:
+        parts.append(int(bit))
+    except ValueError:
+        parts.append(0)
+while len(parts) < 3:
+    parts.append(0)
+sys.exit(0 if tuple(parts[:3]) >= (1, 3, 14) else 1)
+PY
+}
+
+ensure_bun() {
+  export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+  export PATH="$BUN_INSTALL/bin:$PATH"
+  if command -v bun >/dev/null 2>&1 && bun_new_enough "$(bun --version)"; then
+    return 0
+  fi
+  echo "omp-install: installing bun (>= 1.3.14)"
+  curl -fsSL https://bun.sh/install | bash
+  export PATH="$BUN_INSTALL/bin:$PATH"
+  need bun
+  if ! bun_new_enough "$(bun --version)"; then
+    echo "omp-install: bun $(bun --version) is too old (need >= 1.3.14)" >&2
+    exit 1
+  fi
+}
+
+pick_launcher_dir() {
+  if [ -d "$LAUNCHER_DIR" ] && [ -w "$LAUNCHER_DIR" ]; then
+    return 0
+  fi
+  if mkdir -p "$LAUNCHER_DIR" 2>/dev/null && [ -w "$LAUNCHER_DIR" ]; then
+    return 0
+  fi
+  LAUNCHER_DIR="${HOME}/.local/bin"
+  mkdir -p "$LAUNCHER_DIR"
+  echo "omp-install: $LAUNCHER_DIR (add this to PATH if omp is not found)"
+}
+
+need git
+need python3
+need curl
+ensure_bun
+
+clone_or_update() {
+  if [ -d "$PREFIX/.git" ]; then
+    echo "omp-install: existing checkout $PREFIX"
+    git -C "$PREFIX" fetch --prune origin || true
+    git -C "$PREFIX" checkout "$BRANCH" 2>/dev/null || \
+      git -C "$PREFIX" checkout -B "$BRANCH"
+    return 0
+  fi
+  mkdir -p "$(dirname "$PREFIX")"
+  echo "omp-install: clone $GIT_URL → $PREFIX"
+  git clone --branch "$BRANCH" "$GIT_URL" "$PREFIX"
+}
+
+clone_or_update
+cd "$PREFIX"
+
+KIT="$PREFIX/scripts/hacker"
+if [ ! -d "$KIT" ] && [ -d "$HERE" ]; then
+  KIT="$HERE"
+fi
+
+echo "omp-install: bun install"
+bun install
+if [ -f "$KIT/install-natives.sh" ]; then
+  echo "omp-install: prebuilt natives"
+  sh "$KIT/install-natives.sh"
+fi
+if [ -f "$KIT/install-avs.sh" ]; then
+  echo "omp-install: avs android screen cli (best-effort)"
+  sh "$KIT/install-avs.sh" || echo "omp-install: avs build skipped/failed (non-fatal)"
+fi
+if [ -x "$PREFIX/scripts/link-omp.sh" ]; then
+  echo "omp-install: link-omp.sh"
+  sh "$PREFIX/scripts/link-omp.sh" || \
+    echo "omp-install: link-omp.sh failed (non-fatal; launch.sh still works)" >&2
+fi
+
+LAUNCHER="$KIT/launch.sh"
+if [ ! -f "$LAUNCHER" ]; then
+  echo "omp-install: missing $LAUNCHER" >&2
+  exit 1
+fi
+chmod +x "$LAUNCHER"
+pick_launcher_dir
+install -m 755 "$LAUNCHER" "$LAUNCHER_DIR/omp"
+echo "omp-install: launcher → $LAUNCHER_DIR/omp"
+
+mkdir -p "$(dirname "$ENV_FILE")" "$AGENT_DIR/skills" "$AGENT_DIR/extensions"
+if [ ! -f "$ENV_FILE" ]; then
+  cp "$KIT/env.example" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+  echo "omp-install: wrote $ENV_FILE from env.example — set OPENAI_API_KEY"
+else
+  echo "omp-install: keeping existing $ENV_FILE"
+fi
+
+ensure_env() {
+  key="$1"
+  value="$2"
+  if grep -q "^export ${key}=" "$ENV_FILE" 2>/dev/null; then
+    return 0
+  fi
+  printf '\nexport %s="%s"\n' "$key" "$value" >>"$ENV_FILE"
+}
+
+ensure_env OMP_FORK_ROOT "$PREFIX"
+ensure_env OMP_BIN "$PREFIX/packages/coding-agent/scripts/omp"
+ensure_env OMP_AGENT_DIR "$AGENT_DIR"
+
+export OMP_FORK_ROOT="$PREFIX"
+export OMP_AGENT_DIR="$AGENT_DIR"
+export OMP_ENV="$ENV_FILE"
+export OMP_LAUNCHER_DIR="$LAUNCHER_DIR"
+sh "$KIT/sync-kit.sh"
+
+if [ "${OMP_SKIP_CLAUDE_RED:-0}" != "1" ]; then
+  if [ -f "$KIT/install-claude-red.sh" ]; then
+    echo "omp-install: claude-red pack"
+    if ! sh "$KIT/install-claude-red.sh"; then
+      echo "omp-install: claude-red clone failed (non-fatal; retry $KIT/install-claude-red.sh)" >&2
+    fi
+  fi
+fi
+
+if [ "${OMP_SKIP_WEB:-0}" != "1" ] && [ -f "$KIT/install-web.sh" ]; then
+  echo "omp-install: web pentest tools"
+  if ! sh "$KIT/install-web.sh"; then
+    echo "omp-install: web toolchain failed (non-fatal; retry $KIT/install-web.sh)" >&2
+  fi
+fi
+
+if [ "${OMP_SKIP_APK:-0}" != "1" ] && [ -f "$KIT/install-apk.sh" ]; then
+  echo "omp-install: apk reverse sidecar"
+  if ! sh "$KIT/install-apk.sh"; then
+    echo "omp-install: apk sidecar failed (non-fatal; retry $KIT/install-apk.sh)" >&2
+  fi
+fi
+
+echo "omp-install: done"
+echo "omp-install: $PREFIX @ $(git -C "$PREFIX" log -1 --oneline)"
+echo "omp-install: set OPENAI_API_KEY in $ENV_FILE (beefsms), then: omp"
+echo "omp-install: later: $KIT/update.sh"
+echo "omp-install: reverse env: $KIT/install-reverse.sh"
+echo "omp-install: claude-red: $KIT/install-claude-red.sh"
+echo "omp-install: or paste $PREFIX/PROMPT.md to another AI"

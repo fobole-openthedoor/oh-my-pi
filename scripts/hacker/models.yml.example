@@ -1,0 +1,108 @@
+# beefsms OpenAI-compatible gateway.
+# Preferred: /login beefsms (paste key; URL is already set).
+# Fallback env: BEEFSMS_API_KEY or OPENAI_API_KEY. Do not put the secret here.
+providers:
+  beefsms:
+    baseUrl: http://openai.beefsms.com:38888/v1
+    api: openai-completions
+    auth: oauth
+    authHeader: true
+    compat:
+      supportsDeveloperRole: false
+      supportsStore: false
+      supportsStrictMode: false
+      supportsUsageInStreaming: true
+      maxTokensField: max_tokens
+      streamIdleTimeoutMs: 300000
+    models:
+      - id: happy/kimi-k3
+        name: Kimi K3
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        compactionModel: beefsms/deepseek-flash
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsDeveloperRole: false
+          supportsReasoningEffort: true
+          supportsStore: false
+          supportsStrictMode: false
+          maxTokensField: max_tokens
+          thinkingFormat: openai
+          streamMarkupHealingPattern: kimi
+      - id: happy/glm-5.3
+        name: GLM-5.3
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        compactionModel: beefsms/deepseek-flash
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: zai
+          requiresReasoningContentForToolCalls: true
+      - id: happy/glm-5.3-plus
+        name: GLM-5.3 Plus
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        compactionModel: beefsms/deepseek-flash
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: zai
+          requiresReasoningContentForToolCalls: true
+      - id: happy/qwen-3.8-fast
+        name: Qwen 3.8 Fast
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 131072
+        compactionModel: beefsms/deepseek-flash
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: qwen
+          requiresReasoningContentForToolCalls: true
+      - id: deepseek-flash
+        name: DeepSeek Flash
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 384000
+        compactionModel: beefsms/deepseek-flash
+        cost:
+          input: 0
+          output: 0
+          cacheRead: 0
+          cacheWrite: 0
+        compat:
+          supportsReasoningEffort: true
+          thinkingFormat: openai
+          maxTokensField: max_tokens
+          reasoningContentField: reasoning_content
+          requiresReasoningContentForToolCalls: true
+          requiresAssistantContentForToolCalls: true
+          allowsSyntheticReasoningContentForToolCalls: false
+          supportsToolChoice: false
+          stripImageInput: false
+          clampOutputToModelMax: true

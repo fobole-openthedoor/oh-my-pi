@@ -1,0 +1,28 @@
+modelRoles:
+  default: beefsms/happy/glm-5.3-plus
+  smol: beefsms/deepseek-flash
+  compact: beefsms/deepseek-flash
+  plan: beefsms/happy/kimi-k3
+  commit: beefsms/happy/qwen-3.8-fast
+  vision: beefsms/deepseek-flash:low
+modelProviderOrder:
+  - beefsms
+defaultThinkingLevel: max
+tools:
+  approvalMode: yolo
+compaction:
+  enabled: true
+  methodOrder: [shake, soft]
+  thresholdPercent: 50
+  midTurnEnabled: true
+web_search:
+  enabled: true
+providers:
+  webSearchOrder:
+    - brave
+    - auto
+statusLine:
+  contextLine: percentage
+ttsr:
+  repeatMode: after-gap
+  repeatGap: 2
