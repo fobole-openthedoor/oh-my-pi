@@ -31,7 +31,7 @@ on:
          - "patches/**"
          - ".github/**"
    pull_request:
-      branches: [main, omp2]
+      branches: [main]
       paths:
          - "packages/**"
          - "crates/**"
@@ -77,11 +77,8 @@ concurrency:
 
 env:
    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-   # native_addons builds the pair TS jobs need; native_addons_cross builds the
-   # rest. Together they must equal //:natives-all (checked in the cross job),
-   # so a filegroup addition cannot silently skip both.
+   # native_addons builds the pair TS jobs need.
    NATIVES_X64_TARGETS: natives-linux-x64-baseline natives-linux-x64-modern
-   NATIVES_CROSS_TARGETS: natives-darwin-arm64 natives-darwin-x64-baseline natives-linux-arm64 natives-linux-musl-arm64 natives-linux-musl-x64-baseline natives-win32-arm64 natives-win32-x64-baseline
    # Per-test wall-clock ceiling (seconds) for scripts/ci-test-ts.ts. omp-kata
    # runners with reclaim_guest_freed_memory (infra/tune-kata-runtime.sh) run
    # the SQLite/subprocess-heavy coding-agent suites 1.5-2x slower, which put
@@ -275,8 +272,7 @@ jobs:
    # 18.3.1 addon). Only main saves; see the save step for why.
    #
    # Main (kata, cluster remote cache) builds only the pair here so the TS
-   # fan-out starts as soon as it links; native_addons_cross builds every
-   # other target in parallel. Job name says "bazel" for continuity
+   # fan-out starts as soon as it links. Job name says "bazel" for continuity
    # with required checks.
    native_addons:
       name: Build native addons (bazel)
@@ -498,77 +494,6 @@ jobs:
               if-no-files-found: error
               retention-days: 1
 
-   # The remaining targets (darwin, arm64, musl and win32 cross builds). Only
-   # release jobs consume them, so they build beside the TS fan-out instead of
-   # ahead of it: serially after the pair they held every test job back ~10
-   # min on native-changing main pushes. Non-PR only, like rust_validate;
-   # the build also keeps the remote cache warm for release runs.
-   native_addons_cross:
-      name: Build native addons (bazel, cross targets)
-      if: github.event_name != 'pull_request'
-      runs-on: omp-kata
-      steps:
-         - uses: actions/checkout@v4
-         - id: cache
-           uses: ./.github/actions/bazel-cache
-         - name: Build cross-target native addons
-           run: |
-              set -eo pipefail
-              if [ "$(ulimit -Sn)" != unlimited ] && [ "$(ulimit -Sn)" -lt 65536 ]; then ulimit -Sn 65536 || true; fi
-              # One addon per invocation, for the OOM reason in native_addons.
-              : > "$RUNNER_TEMP/bazel-build.log"
-              for target in $NATIVES_CROSS_TARGETS; do
-                bazelisk --bazelrc="${{ steps.cache.outputs.rc }}" build "//:$target" 2>&1 | tee -a "$RUNNER_TEMP/bazel-build.log"
-              done
-         # The two jobs' target lists must together cover //:natives-all
-         # exactly; a target added to the filegroup but to neither list would
-         # otherwise silently never build or ship. cquery, not query: the rc's
-         # --config=ci is defined for build only, which cquery inherits and
-         # query rejects; this also reuses the warm server.
-         - name: Check addon target lists cover natives-all
-           run: |
-              set -euo pipefail
-              read -r -a listed <<< "$NATIVES_X64_TARGETS $NATIVES_CROSS_TARGETS"
-              expected="$(printf '%s\n' "${listed[@]}" | sort)"
-              actual="$(bazelisk --bazelrc="${{ steps.cache.outputs.rc }}" cquery 'labels(srcs, //:natives-all)' 2>"$RUNNER_TEMP/query.err" | sed -E 's/ \(.*\)$//; s/.*://' | sort)" || {
-                cat "$RUNNER_TEMP/query.err"
-                exit 1
-              }
-              if [ "$expected" != "$actual" ]; then
-                echo "::error title=Native addon target lists::NATIVES_X64_TARGETS + NATIVES_CROSS_TARGETS must equal //:natives-all srcs"
-                diff <(echo "$expected") <(echo "$actual") || true
-                exit 1
-              fi
-         - name: Verify Apple Foundation Models bridge
-           run: |
-              set -euo pipefail
-              addon=bazel-bin/natives-darwin-arm64/pi_natives.darwin-arm64.node
-              # The bridge is embedded as a separate dylib (module OmpAppleFm),
-              # never linked: a linked Swift runtime crashes the addon on load
-              # on older macOS.
-              grep -aqF OmpAppleFm "$addon" ||
-                 { echo "::error::Darwin arm64 addon was built without the Apple Foundation Models bridge"; exit 1; }
-              dylibs="$(llvm-objdump --macho --dylibs-used "$addon")"
-              if grep -E 'libswift|FoundationModels' <<< "$dylibs"; then
-                 echo "::error::Darwin arm64 addon links the Swift runtime or FoundationModels directly"; exit 1
-              fi
-         - name: Report bazel cache stats
-           shell: bash
-           run: |
-              summary=$(sed -E 's/\x1b\[[0-9;]*m//g' "$RUNNER_TEMP/bazel-build.log" | grep -E '[0-9]+ processes:' | tail -1 || true)
-              echo "::notice title=Bazel build summary::${summary:-no process summary found}"
-         # Everything except the linux-x64 pair, which native_addons ships as
-         # its own small `natives-linux-x64` artifact.
-         - name: Upload remaining native addon artifacts
-           uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-           with:
-              name: native-addons
-              path: |
-                 bazel-bin/natives-*/*.node
-                 !bazel-bin/natives-linux-x64-*/*.node
-              if-no-files-found: error
-              retention-days: 1
-
    test_coding_agent_native:
       name: "Test coding-agent native/unit (TS) ${{ matrix.shard }}"
       runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'omp-kata' }}
@@ -738,7 +663,6 @@ jobs:
       if: ${{ needs.release_metadata.outputs.is-release == 'true' && !cancelled() &&
          needs.rust_validate.result == 'success' &&
          needs.native_addons.result == 'success' &&
-         needs.native_addons_cross.result == 'success' &&
          needs.test_workspace.result == 'success' &&
          needs.test_coding_agent_singleton.result == 'success' &&
          needs.test_ts_native.result == 'success' &&
@@ -747,7 +671,7 @@ jobs:
          needs.test_coding_agent_native.result == 'success' &&
          needs.test_smoke.result == 'success' && needs.check.result == 'success' &&
          needs.install_methods.result == 'success' }}
-      needs: [release_metadata, check, rust_validate, native_addons, native_addons_cross, test_workspace, test_coding_agent_singleton, test_ts_native, test_coding_agent_ui, test_coding_agent_runtime, test_coding_agent_native, test_smoke, install_methods]
+      needs: [release_metadata, check, rust_validate, native_addons, test_workspace, test_coding_agent_singleton, test_ts_native, test_coding_agent_ui, test_coding_agent_runtime, test_coding_agent_native, test_smoke, install_methods]
       runs-on: ubuntu-22.04
       steps:
          - uses: actions/checkout@v4
@@ -769,15 +693,12 @@ jobs:
    release_binary:
       name: "Release binary: ${{ matrix.target_id }}"
       if: ${{ needs.release_metadata.outputs.is-release == 'true' && !cancelled() &&
-         needs.native_addons.result == 'success' &&
-         needs.native_addons_cross.result == 'success' }}
-      needs: [release_metadata, native_addons, native_addons_cross]
+         needs.native_addons.result == 'success' }}
+      needs: [release_metadata, native_addons]
       strategy:
          fail-fast: false
          matrix:
             include:
-               # Addons cross-built by Bazel (clang + ld64.lld against the
-               # Command Line Tools SDK) in native_addons_cross.
                - {
                     platform: darwin,
                     target_id: darwin-x64,
@@ -819,14 +740,6 @@ jobs:
                     target_id: win32-x64,
                     binary_path: packages/coding-agent/binaries/omp-windows-x64.exe,
                     native_targets: win32-x64-baseline,
-                 }
-               # Addon cross-built by Bazel (clang-cl + xwin arm64 splat) in
-               # native_addons_cross.
-               - {
-                    platform: win32,
-                    target_id: win32-arm64,
-                    binary_path: packages/coding-agent/binaries/omp-windows-arm64.exe,
-                    native_targets: win32-arm64,
                  }
       runs-on: ubuntu-22.04
       permissions:
@@ -903,7 +816,6 @@ jobs:
                - { os: macos-15-intel, target_id: darwin-x64, binary: omp-darwin-x64 }
                - { os: macos-15, target_id: darwin-arm64, binary: omp-darwin-arm64 }
                - { os: windows-2025, target_id: win32-x64, binary: omp-windows-x64.exe }
-               - { os: windows-11-arm, target_id: win32-arm64, binary: omp-windows-arm64.exe }
       runs-on: ${{ matrix.os }}
       permissions:
          contents: read
@@ -1005,7 +917,7 @@ jobs:
          - name: Install native addons
            uses: ./.github/actions/native-artifacts
            with:
-              targets: linux-x64-baseline linux-x64-modern linux-arm64 darwin-x64-baseline darwin-arm64 win32-x64-baseline win32-arm64
+              targets: linux-x64-baseline linux-x64-modern linux-arm64 darwin-x64-baseline darwin-arm64 win32-x64-baseline
          - name: Publish native leaf packages
            env:
               # Fallback auth: setup-node wrote an .npmrc referencing
@@ -1022,7 +934,7 @@ jobs:
               set -uo pipefail
               logs="$RUNNER_TEMP/native-leaf-logs"
               mkdir -p "$logs"
-              tags=(linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64 win32-arm64)
+              tags=(linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64)
               pids=()
               for tag in "${tags[@]}"; do
                 bun run ci:release:publish-native-leaf "$tag" >"$logs/$tag.log" 2>&1 &
