@@ -191,6 +191,7 @@ function cacheStatusLine(
 		resolveActiveRepo: () => null,
 		lookupPullRequest: async () => ({ stdout: "", exitCode: 1 }),
 		calculateTokensPerSecond: () => null,
+		calculateTtftMs: () => null,
 		limitMatchesActiveAccount: () => false,
 		computeCompactionBoundaries: () => null,
 	};
