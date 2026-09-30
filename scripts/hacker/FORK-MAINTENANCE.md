@@ -81,4 +81,20 @@ angr 10.0.0 / keystone-engine 0.9.2 / lief 1.0.0 / pefile 2024.8.26(pip --user,P
   拿到一批新样本时先挂预热,同时用 file/checksec/rabin2 做快查,深分析开始时缓存已热。实测 /bin/ls 首析 21s,缓存命中后 5.9s(地板价)。
 - 相关查询永远用 MCP `batch` 打包(单 JVM 最多 50 个操作),别逐个发。
 
-注意:omp 侧的 Ghidra MCP 是另一个实现(`re-mcp-ghidra`,见 `~/.omp/agent/mcp.json`),这套调优不适用于它。
+注意:omp 侧的 Ghidra MCP 是另一个实现(`re-mcp-ghidra`,见 `~/.omp/agent/mcp.json`),架构不同但**共享部分调优**(见下节)。
+
+## Ghidra MCP 性能(omp 侧,re-mcp-ghidra)
+
+架构(已读源码确认):`re-mcp-ghidra stdio` 是轻量 **supervisor**(纯 Python,无 JVM);**每个 open_database 的样本各起一个 worker 子进程**,JVM 由 JPype 以 JNI 方式嵌在 worker 内(所以 `pgrep java` 看不到它)。延迟模型:
+
+- supervisor 启动:便宜,会话级一次
+- 某样本首次 `open_database`:worker 启动 + JVM bootstrap(约 10-30s)+ 打开项目;之后该库所有工具调用走热 worker,快
+- 每多开一个不同的样本 = 多一个 JVM(内存按 `ghidra_projects/` 项目大小增长);**分析完用 `close_database` 释放 worker**
+
+正确的 omp 侧节奏(现有 kit 已支持,不用改):
+
+1. `ghidra-open.sh <binary>`(或 omp 内 `/ghidra-open`)用 analyzeHeadless 预导入+全分析到 `<样本目录>/ghidra_projects/<名>.gpr` —— 这等价于 omp 侧的"预热",重活在这里做掉
+2. MCP `open_database`(默认 `run_auto_analysis: false`,**不会**重复分析)直接开热项目
+3. 项目按文件名缓存在样本旁边,跨 omp 会话复用;样本变了用 `/ghidra-open --force` 重建
+
+与 kimi-code 侧共享的调优:`launch.properties` 的 `VMARGS=-Xmx8G` 对 omp worker 同样生效(pyghidra launcher 会解析该文件,launcher.py 有 VMARGS 正则;ghidra-open.sh 的 analyzeHeadless 也读它)。`PI_GHIDRA_CPUS` 和 `ghidra-prewarm.py` 是 kimi-code/pi-ghidra 专属,omp 侧不要用。
