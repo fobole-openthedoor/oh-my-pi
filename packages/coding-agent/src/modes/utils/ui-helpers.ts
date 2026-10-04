@@ -1304,13 +1304,22 @@ export class UiHelpers {
 		this.ctx.present(options?.hideWithToolActivity ? new ToolActivityContainer(notice) : notice);
 	}
 
-	showNewVersionNotification(newVersion: string): void {
+	showNewVersionNotification(newVersion: string, forkVersion?: string): void {
 		const title = "Update Available";
 		const prefix = `New version ${newVersion} is available. Run: `;
 		const command = "omp update";
 		const forkPrefix = "特供版 omp 请使用 ";
 		const forkCommand = "~/oh-my-pi/scripts/hacker/update.sh";
 		const forkSuffix = " 执行升级";
+		const forkStatus =
+			forkVersion === undefined
+				? undefined
+				: Bun.semver.order(forkVersion, newVersion) >= 0
+					? { text: `fork 已同步 v${newVersion},运行上方命令即可更新`, warn: false }
+					: {
+							text: `fork 尚未同步 ${newVersion}(当前集成 v${forkVersion}),update.sh 暂时拉不到此版本`,
+							warn: true,
+						};
 		const native = noticeRow(
 			"info",
 			[
@@ -1320,15 +1329,21 @@ export class UiHelpers {
 				span(`\n${forkPrefix}`),
 				span(forkCommand, "code"),
 				span(forkSuffix),
+				...(forkStatus ? [span(`\n${forkStatus.text}`)] : []),
 			],
 			{ icon: "download" },
 		);
+		const plain = `${title}\n${prefix}${command}\n${forkPrefix}${forkCommand}${forkSuffix}`;
+		const styled = () =>
+			`${theme.bold(theme.fg("warning", title))}\n${theme.fg("muted", prefix)}${theme.fg("accent", command)}` +
+			`\n${theme.fg("muted", forkPrefix)}${theme.fg("accent", forkCommand)}${theme.fg("muted", forkSuffix)}`;
 		this.ctx.present(
 			new TranscriptNotice(native, [
 				new DynamicBorder(text => theme.fg("warning", text)),
-				new Text(`${title}\n${prefix}${command}\n${forkPrefix}${forkCommand}${forkSuffix}`, 1, 0).setStyleFn(
-					() =>
-						`${theme.bold(theme.fg("warning", title))}\n${theme.fg("muted", prefix)}${theme.fg("accent", command)}\n${theme.fg("muted", forkPrefix)}${theme.fg("accent", forkCommand)}${theme.fg("muted", forkSuffix)}`,
+				new Text(forkStatus ? `${plain}\n${forkStatus.text}` : plain, 1, 0).setStyleFn(() =>
+					forkStatus
+						? `${styled()}\n${forkStatus.warn ? theme.fg("warning", forkStatus.text) : theme.fg("muted", forkStatus.text)}`
+						: styled(),
 				),
 				new DynamicBorder(text => theme.fg("warning", text)),
 			]),

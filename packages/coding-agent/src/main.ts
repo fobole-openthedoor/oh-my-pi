@@ -44,7 +44,13 @@ import type { SessionPickerOptions } from "@oh-my-pi/pi-tui/apps/session-picker"
 import { fetchBuild } from "./cli/build-service";
 import { applyStartupCwd } from "./cli/startup-cwd";
 import { runAutoUpdate } from "./cli/auto-update";
-import { getLatestRelease, isSourceCheckout, managedInstallName } from "./cli/update-cli";
+import {
+	type ForkUpdateNotice,
+	getForkIntegratedVersion,
+	getLatestRelease,
+	isSourceCheckout,
+	managedInstallName,
+} from "./cli/update-cli";
 import { findConfigFile } from "./config";
 import { ModelRegistry } from "./config/model-registry";
 import { formatModelSelectorValue } from "@oh-my-pi/pi-tui/overlays/model-selector";
@@ -273,7 +279,7 @@ function writeStartupWarning(warning: string): void {
 	process.stderr.write(`${chalk.yellow(`Warning: ${warning}`)}\n`);
 }
 
-async function checkForNewVersion(currentVersion: string): Promise<string | undefined> {
+async function checkForNewVersion(currentVersion: string): Promise<ForkUpdateNotice | undefined> {
 	if (!cfgStartupCheckUpdate.get(settings) && !cfgUpdateAuto.get(settings)) {
 		return;
 	}
@@ -287,7 +293,11 @@ async function checkForNewVersion(currentVersion: string): Promise<string | unde
 		const { version } = isCompiledBinary()
 			? await fetchBuild({ channel }, { timeoutMs: 5_000, fromVersion: currentVersion })
 			: await getLatestRelease({ timeoutMs: 5_000, channel });
-		return Bun.semver.order(version, currentVersion) > 0 ? version : undefined;
+		if (Bun.semver.order(version, currentVersion) <= 0) {
+			return undefined;
+		}
+		const forkVersion = await getForkIntegratedVersion();
+		return { version, forkVersion };
 	} catch {
 		return undefined;
 	}
@@ -649,7 +659,7 @@ async function runInteractiveMode(
 	session: AgentSession,
 	version: string,
 	notifs: (InteractiveModeNotify | null)[],
-	versionCheckPromise: Promise<string | undefined>,
+	versionCheckPromise: Promise<ForkUpdateNotice | undefined>,
 	initialMessages: string[],
 	setExtensionUIContext: (uiContext: ExtensionUIContext, hasUI: boolean) => void,
 	lspServers: LspStartupServerInfo[] | undefined,
@@ -758,17 +768,28 @@ async function runInteractiveMode(
 			mode.renderInitialMessages({ preserveExistingChat: true }),
 		);
 		// A resolved version check must not insert its banner into a partial transcript.
-		const notifyNewVersion = (newVersion: string): void => {
-			if (cfgStartupCheckUpdate.get(settings)) mode.showNewVersionNotification(newVersion);
+		const notifyNewVersion = (newVersion: string, forkVersion?: string): void => {
+			if (cfgStartupCheckUpdate.get(settings)) mode.showNewVersionNotification(newVersion, forkVersion);
 		};
 		if (cfgUpdateAuto.get(settings)) {
-			void runAutoUpdate(checkedVersionPromise, {
-				show: update => mode.showVersionUpdate(update),
-				notify: notifyNewVersion,
-			});
+			let updateNotice: ForkUpdateNotice | undefined;
+			void runAutoUpdate(
+				checkedVersionPromise.then(notice => {
+					updateNotice = notice;
+					return notice?.version;
+				}),
+				{
+					show: update => mode.showVersionUpdate(update),
+					notify: newVersion =>
+						notifyNewVersion(
+							newVersion,
+							updateNotice?.version === newVersion ? updateNotice.forkVersion : undefined,
+						),
+				},
+			);
 		} else {
-			checkedVersionPromise.then(newVersion => {
-				if (newVersion) notifyNewVersion(newVersion);
+			checkedVersionPromise.then(notice => {
+				if (notice) notifyNewVersion(notice.version, notice.forkVersion);
 			});
 		}
 
