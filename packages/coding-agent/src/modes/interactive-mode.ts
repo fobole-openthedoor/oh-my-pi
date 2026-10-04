@@ -7728,8 +7728,8 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.setWorkingMessage(message);
 	}
 
-	showNewVersionNotification(newVersion: string): void {
-		this.#uiHelpers.showNewVersionNotification(newVersion);
+	showNewVersionNotification(newVersion: string, forkVersion?: string): void {
+		this.#uiHelpers.showNewVersionNotification(newVersion, forkVersion);
 	}
 
 	clearEditor(): void {

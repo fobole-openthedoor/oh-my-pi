@@ -128,4 +128,29 @@ describe("lazy status color re-resolves on theme switch", () => {
 			"特供版 omp 请使用 ~/oh-my-pi/scripts/hacker/update.sh 执行升级",
 		]);
 	});
+	it("shows fork sync status in the update notification", () => {
+		const presentBanner = (newVersion: string, forkVersion?: string): string => {
+			let presented: Component | undefined;
+			const context: Pick<InteractiveModeContext, "present"> = {
+				present(component) {
+					if (!isSingleComponent(component)) throw new Error("Expected one update notification block");
+					presented = component;
+				},
+			};
+			new UiHelpers(context as InteractiveModeContext).showNewVersionNotification(newVersion, forkVersion);
+			if (!presented) throw new Error("Update notification was not presented");
+			return Bun.stripANSI(presented.render(100).join("\n"));
+		};
+
+		// Fork has not integrated the upstream release yet: users must not read
+		// the banner as "update.sh can fetch it now".
+		expect(presentBanner("18.6.0", "18.4.12")).toContain(
+			"fork 尚未同步 18.6.0(当前集成 v18.4.12),update.sh 暂时拉不到此版本",
+		);
+		// Fork main already carries the release.
+		expect(presentBanner("18.6.0", "18.6.0")).toContain("fork 已同步 v18.6.0,运行上方命令即可更新");
+		// Fork state undetermined (offline/rate-limited): no status line at all.
+		expect(presentBanner("18.6.0")).not.toContain("fork 已同步");
+		expect(presentBanner("18.6.0")).not.toContain("fork 尚未同步");
+	});
 });
