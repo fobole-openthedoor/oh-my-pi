@@ -43,7 +43,13 @@ import { formatKeyHint } from "@oh-my-pi/pi-tui/app-keybindings";
 import type { SessionPickerOptions } from "@oh-my-pi/pi-tui/apps/session-picker";
 import { fetchBuild } from "./cli/build-service";
 import { applyStartupCwd } from "./cli/startup-cwd";
-import { getLatestRelease, isSourceCheckout, managedInstallName } from "./cli/update-cli";
+import {
+	type ForkUpdateNotice,
+	getForkIntegratedVersion,
+	getLatestRelease,
+	isSourceCheckout,
+	managedInstallName,
+} from "./cli/update-cli";
 import { findConfigFile } from "./config";
 import { ModelRegistry } from "./config/model-registry";
 import { formatModelSelectorValue } from "@oh-my-pi/pi-tui/overlays/model-selector";
@@ -243,7 +249,7 @@ export function writeStartupNotice(parsedArgs: Pick<Args, "mode">, text: string)
 	(parsedArgs.mode === "json" ? process.stderr : process.stdout).write(text);
 }
 
-async function checkForNewVersion(currentVersion: string): Promise<string | undefined> {
+async function checkForNewVersion(currentVersion: string): Promise<ForkUpdateNotice | undefined> {
 	if (!cfgStartupCheckUpdate.get(settings)) {
 		return;
 	}
@@ -257,7 +263,11 @@ async function checkForNewVersion(currentVersion: string): Promise<string | unde
 		const { version } = isCompiledBinary()
 			? await fetchBuild({ channel }, { timeoutMs: 5_000, fromVersion: currentVersion })
 			: await getLatestRelease({ timeoutMs: 5_000, channel });
-		return Bun.semver.order(version, currentVersion) > 0 ? version : undefined;
+		if (Bun.semver.order(version, currentVersion) <= 0) {
+			return undefined;
+		}
+		const forkVersion = await getForkIntegratedVersion();
+		return { version, forkVersion };
 	} catch {
 		return undefined;
 	}
@@ -624,7 +634,7 @@ async function runInteractiveMode(
 	version: string,
 	startupChangelog: StartupChangelogSelection | undefined,
 	notifs: (InteractiveModeNotify | null)[],
-	versionCheckPromise: Promise<string | undefined>,
+	versionCheckPromise: Promise<ForkUpdateNotice | undefined>,
 	initialMessages: string[],
 	setExtensionUIContext: (uiContext: ExtensionUIContext, hasUI: boolean) => void,
 	lspServers: LspStartupServerInfo[] | undefined,
@@ -716,12 +726,12 @@ async function runInteractiveMode(
 			mode.renderInitialMessages({ preserveExistingChat: true }),
 		);
 		// A resolved version check must not insert its banner into a partial transcript.
-		checkedVersionPromise.then(newVersion => {
+		checkedVersionPromise.then(notice => {
 			if (!cfgStartupCheckUpdate.get(settings)) {
 				return;
 			}
-			if (newVersion) {
-				mode.showNewVersionNotification(newVersion);
+			if (notice) {
+				mode.showNewVersionNotification(notice.version, notice.forkVersion);
 			}
 		});
 
