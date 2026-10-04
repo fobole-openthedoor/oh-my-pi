@@ -1052,6 +1052,39 @@ export async function getLatestRelease(
 	};
 }
 
+/** Latest upstream release plus the fork's integrated version, for the startup banner. */
+export interface ForkUpdateNotice {
+	version: string;
+	forkVersion?: string;
+}
+
+/** Fork remote whose main branch carries the integrated upstream version. */
+const DEFAULT_FORK_REPO = "fobole-openthedoor/oh-my-pi";
+
+/**
+ * Upstream version the fork's main branch has integrated, read from the fork's
+ * package.json on raw.githubusercontent.com. Returns undefined when the fork
+ * state cannot be determined (offline, rate limited, non-fork install) so the
+ * banner degrades to the plain upstream notice. `OMP_FORK_REPO` overrides the repo.
+ */
+export async function getForkIntegratedVersion(
+	options: { timeoutMs?: number; forkRepo?: string } = {},
+): Promise<string | undefined> {
+	const timeoutMs = options.timeoutMs ?? 3_000;
+	const forkRepo = options.forkRepo ?? process.env.OMP_FORK_REPO ?? DEFAULT_FORK_REPO;
+	try {
+		const response = await fetch(
+			`https://raw.githubusercontent.com/${forkRepo}/main/packages/coding-agent/package.json`,
+			{ headers: { accept: "application/json" }, signal: withTimeoutSignal(timeoutMs) },
+		);
+		if (!response.ok) return undefined;
+		const data: unknown = await response.json();
+		return isRecord(data) && typeof data.version === "string" ? data.version : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 interface BunInstallCachePruneResult {
 	scannedPackages: number;
 	removedEntries: number;
