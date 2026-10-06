@@ -53,8 +53,21 @@ git fetch --prune "$REMOTE" "$BRANCH"
 
 if ! git merge-base --is-ancestor HEAD "$REMOTE/$BRANCH" && \
    ! git merge-base --is-ancestor "$REMOTE/$BRANCH" HEAD; then
-  echo "omp-update: local and $REMOTE/$BRANCH have diverged; merge/rebase by hand" >&2
-  exit 1
+  # Diverged. After a fork history rewrite (rebase + force push) the local
+  # custom commits are patch-equivalent to the new remote ones; detect that
+  # with git cherry and reset instead of refusing. Any truly local commit
+  # ("+" lines) keeps the old manual-divergence behavior.
+  UNIQUE="$(git cherry "$REMOTE/$BRANCH" HEAD | grep '^+' || true)"
+  if [ -n "$UNIQUE" ]; then
+    echo "omp-update: local and $REMOTE/$BRANCH have diverged; merge/rebase by hand" >&2
+    exit 1
+  fi
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "omp-update: history was rewritten but the working tree has local edits; commit/stash them first" >&2
+    exit 1
+  fi
+  echo "omp-update: history rewritten upstream; local commits are patch-equivalent, resetting to $REMOTE/$BRANCH"
+  git reset --hard "$REMOTE/$BRANCH"
 fi
 
 git checkout "$BRANCH" >/dev/null 2>&1 || git checkout -B "$BRANCH" "$REMOTE/$BRANCH"
