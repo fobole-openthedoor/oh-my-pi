@@ -155,7 +155,7 @@ jobs:
 
    check:
       name: Lint, type check & web build
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       steps:
          - uses: actions/checkout@v4
          - uses: ./.github/actions/bun-install
@@ -189,11 +189,8 @@ jobs:
                 cargo install --locked --force cargo-deny --version "$ver"
               fi
               # `--offline` needs every workspace crate already in the registry
-              # cache. PR runs use a fresh GitHub-hosted runner (see runs-on
-              # above) with no prior cargo work, so nothing populates the index
-              # for our own graph and resolution fails. Non-PR events land on
-              # vmon, whose omp-ci template bakes a warm Cargo registry (only
-              # crates added since the template build download). Fetch first.
+              # cache. Every fork job uses a fresh GitHub-hosted runner with no
+              # prior cargo work, so fetch the index and graph first.
               cargo fetch --locked
               cargo deny --locked --offline check licenses sources
          - name: Type check workspace
@@ -233,12 +230,12 @@ jobs:
    # Rust validation (tests, clippy, rustfmt) runs on non-PR events only.
    # Native-changing PRs are rare enough that they do not warrant PR-side
    # Rust validation or a PR-side addon build (see native_addons): Rust is
-   # validated post-merge on main (vmon, node Bazel cache) and again at
+   # validated post-merge on main (GitHub-hosted runners) and again at
    # release. A skipped required check still satisfies branch protection.
    rust_validate:
       name: Validate Rust workspace (bazel)
       if: github.event_name != 'pull_request'
-      runs-on: vmon-large/from=omp-ci
+      runs-on: ubuntu-22.04
       steps:
          - uses: actions/checkout@v4
          - uses: ./.github/actions/bun-install
@@ -285,12 +282,12 @@ jobs:
    # (a merged grep fix plus its TS test failed 75 PR runs against the
    # 18.3.1 addon). Only main saves; see the save step for why.
    #
-   # Main (vmon, node Bazel cache) builds only the pair here so the TS
-   # fan-out starts as soon as it links. Job name says "bazel" for continuity
+   # Main builds only the pair here so the TS fan-out starts as soon as it
+   # links. Job name says "bazel" for continuity
    # with required checks.
    native_addons:
       name: Build native addons (bazel)
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       # actions: write lets main prune superseded addon cache entries.
       permissions:
          contents: read
@@ -310,9 +307,8 @@ jobs:
 
          # ---- PR path: main-built addons from actions/cache, else npm ----
          # `ci-natives` is a plain workspace-relative path on purpose: the
-         # cache version hashes the literal path list, so vmon (save) and
-         # hosted (restore) must spell it identically, and upload-artifact
-         # skips dot-directories by default.
+         # cache version hashes the literal path list, so main and PR runs must
+         # spell it identically; upload-artifact skips dot-directories by default.
          - name: Restore main-built native addons
            id: natives-cache
            if: github.event_name == 'pull_request'
@@ -419,11 +415,8 @@ jobs:
          # The three steps below run only on main (never exercised by PR or
          # branch runs) and are pure optimization for later PRs: a failure
          # must never fail native_addons and with it every test job.
-         # PR runs restore this entry on GitHub-hosted runners, which read
-         # GitHub's cache; on vmon runners actions/cache goes to the node's
-         # local cache. The vmon runner hands GitHub's results URL to node
-         # actions (not run steps) as ACTIONS_RESULTS_ORL, so a script action
-         # looks it up and the probe and save below talk to GitHub.
+         # All fork jobs use GitHub's cache. Resolve its results URL explicitly
+         # so the probe and save below use the same service as the PR restore.
          - name: Locate GitHub's cache service
            id: gh-results
            if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -475,19 +468,14 @@ jobs:
 
    test_coding_agent_native:
       name: "Test coding-agent native/unit (TS) ${{ matrix.shard }}"
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       timeout-minutes: 25
-      # The longest PR job, so it runs as three shards on hosted PR runners
-      # (two left the slower shard ~25 s behind every other job). Main keeps
-      # one: each vmon job holds an 8 vCPU / 16 GiB sandbox against the CI
-      # team's limits, and the main fan-out already runs up to a dozen.
-      # Declared first among the test jobs: when the team is at its sandbox
-      # limit the longest bucket should not be the one left waiting (probe
-      # run 36238796966 queued it 1.9 min behind the shorter buckets).
-      # No required check keys on this job name (branch protection and
-      # rulesets are off for main/omp2), so the per-shard names are safe.
+      # The longest PR job runs as three shards on hosted runners; main keeps
+      # one. It is declared first so the longest bucket starts without waiting
+      # behind shorter test jobs. No required check keys on this job name
+      # (branch protection and rulesets are off for main), so shard names are safe.
       strategy:
          fail-fast: false
          matrix:
@@ -506,7 +494,7 @@ jobs:
 
    test_workspace:
       name: Test TS workspace fast
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       timeout-minutes: 20
@@ -523,7 +511,7 @@ jobs:
 
    test_coding_agent_singleton:
       name: Test coding-agent singleton/global-state (TS)
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       timeout-minutes: 20
@@ -540,7 +528,7 @@ jobs:
 
    test_ts_native:
       name: Test TS native/integration packages
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       timeout-minutes: 25
@@ -559,7 +547,7 @@ jobs:
 
    test_coding_agent_ui:
       name: Test coding-agent UI/TUI (TS)
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       timeout-minutes: 25
@@ -576,7 +564,7 @@ jobs:
 
    test_coding_agent_runtime:
       name: Test coding-agent runtime/session (TS)
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       timeout-minutes: 25
@@ -595,7 +583,7 @@ jobs:
 
    test_smoke:
       name: Test CLI smoke (TS)
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       timeout-minutes: 15
@@ -610,7 +598,7 @@ jobs:
 
    install_methods:
       name: Install method smoke tests
-      runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-22.04' || 'vmon-large/from=omp-ci' }}
+      runs-on: ubuntu-22.04
       needs: [native_addons]
       if: ${{ !cancelled() && needs.native_addons.result == 'success' }}
       steps:
