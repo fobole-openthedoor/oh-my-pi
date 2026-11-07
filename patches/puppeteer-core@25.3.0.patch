@@ -257,6 +257,34 @@ index 8698d2a5a976b277344fe42e90ffe985bdf0fbd7..62c3b7ca8ec987cc62ceacec69acf654
          }
          /**
           * The full HTML contents of the frame, including the DOCTYPE.
+diff --git a/lib/puppeteer/cdp/CdpPreloadScript.js b/lib/puppeteer/cdp/CdpPreloadScript.js
+index 0ae8210b3f80d61ec100fc393f7cdbf8c1ca964f..f4ebf6b40cbc2f22b70a108d75c6d948ea862ee5 100644
+--- a/lib/puppeteer/cdp/CdpPreloadScript.js
++++ b/lib/puppeteer/cdp/CdpPreloadScript.js
+@@ -17,10 +17,12 @@ export class CdpPreloadScript {
+      */
+     #id;
+     #source;
++    #worldName;
+     #frameToId = new WeakMap();
+-    constructor(mainFrame, id, source) {
++    constructor(mainFrame, id, source, worldName) {
+         this.#id = id;
+         this.#source = source;
++        this.#worldName = worldName;
+         this.#frameToId.set(mainFrame, id);
+     }
+     get id() {
+@@ -29,6 +31,9 @@ export class CdpPreloadScript {
+     get source() {
+         return this.#source;
+     }
++    get worldName() {
++        return this.#worldName;
++    }
+     getIdForFrame(frame) {
+         return this.#frameToId.get(frame);
+     }
 diff --git a/lib/puppeteer/cdp/ExecutionContext.js b/lib/puppeteer/cdp/ExecutionContext.js
 index c67098fd6c9f66666ad2b41d5b7dea42e1991833..8cb17f9acc50ff47bbbd5faf09112e05558c4af2 100644
 --- a/lib/puppeteer/cdp/ExecutionContext.js
@@ -309,10 +337,18 @@ index c67098fd6c9f66666ad2b41d5b7dea42e1991833..8cb17f9acc50ff47bbbd5faf09112e05
          try {
              callFunctionOnPromise = this.#client.send('Runtime.callFunctionOn', {
 diff --git a/lib/puppeteer/cdp/Frame.js b/lib/puppeteer/cdp/Frame.js
-index 4e27013ad8f9b89ee13913e55bba243cc8bf9662..42c4bf547443aa01955dde6f4e0f4d5385ca3c96 100644
+index 4e27013ad8f9b89ee13913e55bba243cc8bf9662..d1e0eb0c01f6943389b76efb4694c2186fdd9ff7 100644
 --- a/lib/puppeteer/cdp/Frame.js
 +++ b/lib/puppeteer/cdp/Frame.js
-@@ -276,7 +276,7 @@ let CdpFrame = (() => {
+@@ -263,6 +263,7 @@ let CdpFrame = (() => {
+             }
+             const { identifier } = await this.#client.send('Page.addScriptToEvaluateOnNewDocument', {
+                 source: preloadScript.source,
++                ...(preloadScript.worldName ? { worldName: preloadScript.worldName } : {}),
+             });
+             preloadScript.setIdForFrame(this, identifier);
+         }
+@@ -276,7 +277,7 @@ let CdpFrame = (() => {
                  this.#client.send('Runtime.addBinding', {
                      name: CDP_BINDING_PREFIX + binding.name,
                  }),
@@ -321,7 +357,7 @@ index 4e27013ad8f9b89ee13913e55bba243cc8bf9662..42c4bf547443aa01955dde6f4e0f4d53
              ]);
          }
          async removeExposedFunctionBinding(binding) {
-@@ -289,7 +289,7 @@ let CdpFrame = (() => {
+@@ -289,7 +290,7 @@ let CdpFrame = (() => {
                  this.#client.send('Runtime.removeBinding', {
                      name: CDP_BINDING_PREFIX + binding.name,
                  }),
@@ -331,7 +367,7 @@ index 4e27013ad8f9b89ee13913e55bba243cc8bf9662..42c4bf547443aa01955dde6f4e0f4d53
                      // @ts-expect-error: In a different context.
                      globalThis[name] = undefined;
 diff --git a/lib/puppeteer/cdp/FrameManager.js b/lib/puppeteer/cdp/FrameManager.js
-index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..5c88a7a3205276262d979fe2a00b4b12bd64e5de 100644
+index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..2500ce4a1e9c3834acd0249cfdbd2657882da8f5 100644
 --- a/lib/puppeteer/cdp/FrameManager.js
 +++ b/lib/puppeteer/cdp/FrameManager.js
 @@ -13,6 +13,7 @@ import { disposeSymbol } from '../util/disposable.js';
@@ -342,7 +378,16 @@ index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..5c88a7a3205276262d979fe2a00b4b12
  import { isTargetClosedError } from './Connection.js';
  import { CdpDeviceRequestPromptManager } from './DeviceRequestPrompt.js';
  import { ExecutionContext } from './ExecutionContext.js';
-@@ -43,6 +44,13 @@ export class FrameManager extends EventEmitter {
+@@ -23,6 +24,8 @@ import { IsolatedWorld } from './IsolatedWorld.js';
+ import { MAIN_WORLD, PUPPETEER_WORLD } from './IsolatedWorlds.js';
+ import { NetworkManager } from './NetworkManager.js';
+ const CHROME_EXTENSION_PREFIX = 'chrome-extension://';
++const ISOLATED_WORLD_DIRECTIVE = /^\s*(?:(?:\/\/!world=isolated(?=$|\s))|(?:\/\*!world=isolated\s*\*\/))/;
++void PuppeteerURL;
+ /**
+  * A frame manager manages the frames for a given {@link Page | page}.
+  *
+@@ -43,6 +46,13 @@ export class FrameManager extends EventEmitter {
       * frameNavigated event usually contains the latest information.
       */
      #frameNavigatedReceived = new Set();
@@ -356,7 +401,7 @@ index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..5c88a7a3205276262d979fe2a00b4b12
      #deviceRequestPromptManagerMap = new WeakMap();
      #frameTreeHandled;
      get timeoutSettings() {
-@@ -144,6 +152,12 @@ export class FrameManager extends EventEmitter {
+@@ -144,6 +154,12 @@ export class FrameManager extends EventEmitter {
          });
          session.on('Page.frameNavigated', async (event) => {
              this.#frameNavigatedReceived.add(event.frame.id);
@@ -369,7 +414,7 @@ index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..5c88a7a3205276262d979fe2a00b4b12
              await this.#frameTreeHandled?.valueOrThrow();
              void this.#onFrameNavigated(event.frame, event.type);
          });
-@@ -191,9 +205,18 @@ export class FrameManager extends EventEmitter {
+@@ -191,9 +207,18 @@ export class FrameManager extends EventEmitter {
                      this.#frameTreeHandled?.resolve();
                  }),
                  client.send('Page.setLifecycleEventsEnabled', { enabled: true }),
@@ -385,13 +430,29 @@ index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..5c88a7a3205276262d979fe2a00b4b12
 +                // The utility-world preload sentinel is kept so world-scoped init
 +                // scripts still attach on navigation.
 +                client.send('Page.addScriptToEvaluateOnNewDocument', {
-+                    source: `//# sourceURL=${PuppeteerURL.INTERNAL_URL}`,
++                    source: 'void 0;',
 +                    worldName: UTILITY_WORLD_NAME,
 +                }).catch(debugCatchError),
                  ...(frame
                      ? Array.from(this.#scriptsToEvaluateOnNewDocument.values())
                      : []).map(script => {
-@@ -346,6 +369,7 @@ export class FrameManager extends EventEmitter {
+@@ -241,12 +266,14 @@ export class FrameManager extends EventEmitter {
+         }));
+     }
+     async evaluateOnNewDocument(source) {
++        const worldName = ISOLATED_WORLD_DIRECTIVE.test(source) ? UTILITY_WORLD_NAME : undefined;
+         const { identifier } = await this.mainFrame()
+             ._client()
+             .send('Page.addScriptToEvaluateOnNewDocument', {
+             source,
++            ...(worldName ? { worldName } : {}),
+         });
+-        const preloadScript = new CdpPreloadScript(this.mainFrame(), identifier, source);
++        const preloadScript = new CdpPreloadScript(this.mainFrame(), identifier, source, worldName);
+         this.#scriptsToEvaluateOnNewDocument.set(identifier, preloadScript);
+         await Promise.all(this.frames().map(async (frame) => {
+             return await frame.addPreloadScript(preloadScript);
+@@ -346,6 +373,7 @@ export class FrameManager extends EventEmitter {
              return;
          }
          frame = new CdpFrame(this, frameId, parentFrameId, session);
@@ -399,7 +460,7 @@ index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..5c88a7a3205276262d979fe2a00b4b12
          this._frameTree.addFrame(frame);
          this.emit(FrameManagerEvent.FrameAttached, frame);
      }
-@@ -376,6 +400,196 @@ export class FrameManager extends EventEmitter {
+@@ -376,6 +404,196 @@ export class FrameManager extends EventEmitter {
          frame._navigated(framePayload);
          this.emit(FrameManagerEvent.FrameNavigated, frame);
          frame.emit(FrameEvent.FrameNavigated, navigationType);
@@ -596,6 +657,15 @@ index 2322aa136a47b446e2a7b2c4f0bc751f2fb821d0..5c88a7a3205276262d979fe2a00b4b12
      }
      async #createIsolatedWorld(session, name) {
          const key = `${session.id()}:${name}`;
+@@ -383,7 +601,7 @@ export class FrameManager extends EventEmitter {
+             return;
+         }
+         await session.send('Page.addScriptToEvaluateOnNewDocument', {
+-            source: `//# sourceURL=${PuppeteerURL.INTERNAL_URL}`,
++            source: 'void 0;',
+             worldName: name,
+         });
+         await Promise.all(this.frames()
 diff --git a/lib/puppeteer/cdp/IsolatedWorld.js b/lib/puppeteer/cdp/IsolatedWorld.js
 index b0619734a9eeb884f3ac4ffff39b540226aaf818..7e577d8a0200f0201742fd0a471edc9792c35a3f 100644
 --- a/lib/puppeteer/cdp/IsolatedWorld.js
@@ -746,7 +816,7 @@ index eee0d68b24442c5628266663a2d6334a7f1f1540..1216fe4ee94de5544652973227180574
          this.#tasks.add(task);
      }
 diff --git a/lib/puppeteer/common/util.js b/lib/puppeteer/common/util.js
-index b185921857e559f3379924e96dd1dd6345b73374..6ae091b197767645d01e25afbb7d8628d1dbdae7 100644
+index b185921857e559f3379924e96dd1dd6345b73374..87b777d0355909c7bf2b3ff235bf3562259d84bb 100644
 --- a/lib/puppeteer/common/util.js
 +++ b/lib/puppeteer/common/util.js
 @@ -80,7 +80,9 @@ export const withSourcePuppeteerURLIfNone = (functionName, object) => {
@@ -760,6 +830,16 @@ index b185921857e559f3379924e96dd1dd6345b73374..6ae091b197767645d01e25afbb7d8628
      };
      const site = new Error().stack;
      Error.prepareStackTrace = original;
+@@ -235,7 +237,8 @@ export function timeout(ms, cause) {
+ /**
+  * @internal
+  */
+-export const UTILITY_WORLD_NAME = '__puppeteer_utility_world__' + packageVersion;
++void packageVersion;
++export const UTILITY_WORLD_NAME = 'UtilityWorld';
+ /**
+  * @internal
+  */
 diff --git a/lib/puppeteer/node/ChromeLauncher.js b/lib/puppeteer/node/ChromeLauncher.js
 index fb7fe66ecb99fd207b99c1e9a9ae00769f0b9a20..af5284b9ee8226e78fa0243ec2f83a631bbaca9d 100644
 --- a/lib/puppeteer/node/ChromeLauncher.js

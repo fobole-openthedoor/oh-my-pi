@@ -93,7 +93,7 @@ import {
 	clearPageStorage,
 	type StorageKind,
 } from "./storage-state";
-import { enableReact, puppeteerReactHost, type ReactEnableResult } from "./react/devtools-hook";
+import { enableReact, puppeteerIsolatedHost, puppeteerReactHost, type ReactEnableResult } from "./react/devtools-hook";
 import { collectReactRenders, type ReactRendersAction, type ReactRendersResult } from "./react/renders";
 import { readReactSuspense, type ReactSuspenseBoundary, type ReactSuspenseOptions } from "./react/suspense";
 import {
@@ -2055,6 +2055,7 @@ export class WorkerCore {
 					);
 				}
 				this.#observeDialogs();
+				await this.#consoleCapture.install(this.#page);
 				if (payload.mode === "headless") {
 					await applyStealthPatches(this.#browser, this.#page, { browserSession: null, override: null });
 					if (payload.emulateViewport !== false) await applyViewport(this.#page, payload.viewport);
@@ -2072,6 +2073,7 @@ export class WorkerCore {
 				this.#page = page;
 				await this.#claimRelayTarget(page);
 				this.#observeDialogs();
+				await this.#consoleCapture.install(this.#page);
 				if (payload.dialogs) this.#applyDialogPolicy(payload.dialogs);
 			}
 			const client = this.#page.mainFrame().client;
@@ -2113,7 +2115,6 @@ export class WorkerCore {
 				loadedNetworkConditions(),
 				baseUserAgent,
 			);
-			await this.#consoleCapture.install(this.#page);
 			this.#tracing = new BrowserTracingController(this.#page);
 			this.#network = new BrowserNetworkManager(this.#page, payload.allowedDomains);
 			await this.#network.start();
@@ -2305,6 +2306,7 @@ export class WorkerCore {
 		const signal = AbortSignal.any([timeoutSignal, ac.signal, runAc.signal]);
 		const output = new RunOutput();
 		const screenshots: ScreenshotResult[] = [];
+		await this.#consoleCapture.sync(150).catch(() => undefined);
 		const runErrorStartSeq = this.#consoleCapture.nextSequence;
 		const floatingFailure = Promise.withResolvers<never>();
 		const active: ActiveRun = {
@@ -2326,6 +2328,7 @@ export class WorkerCore {
 		let completed = false;
 		let returnValue: unknown;
 		let failure: { error: unknown } | undefined;
+		let timedOutSnapshot: { stalled: string | undefined; dialogNote: string } | undefined;
 		let recoverTab = false;
 		let runPage: RunPageScope | undefined;
 		try {
@@ -2378,12 +2381,10 @@ export class WorkerCore {
 					const dialogNote = dialog?.open
 						? `; a ${dialog.type}(${JSON.stringify(dialog.message?.slice(0, 80) ?? "")}) dialog opened during this run and may still block the page — use tab.handleDialog() or tab.setDialogs("accept"|"dismiss")`
 						: "";
-					const pageErrorCount = this.#consoleCapture.errorCountSince(runErrorStartSeq);
-					const pageErrorNote =
-						pageErrorCount > 0 ? `; ${pageErrorCount} page error(s) since run start — see tab.errors()` : "";
+					timedOutSnapshot = { stalled, dialogNote };
 					rejectCancel(
 						new ToolError(
-							`Browser code execution timed out after ${msg.timeoutMs}ms${stalled ? ` (stalled on ${stalled})` : ""}${dialogNote}${pageErrorNote}`,
+							`Browser code execution timed out after ${msg.timeoutMs}ms${stalled ? ` (stalled on ${stalled})` : ""}${dialogNote}`,
 						),
 					);
 				} else {
@@ -2421,7 +2422,19 @@ export class WorkerCore {
 				signal.removeEventListener("abort", onCancel);
 			}
 		} catch (error) {
-			failure = { error };
+			if (timedOutSnapshot) {
+				await this.#consoleCapture.sync(150).catch(() => undefined);
+				const pageErrorCount = this.#consoleCapture.errorCountSince(runErrorStartSeq);
+				const pageErrorNote =
+					pageErrorCount > 0 ? `; ${pageErrorCount} page error(s) since run start — see tab.errors()` : "";
+				failure = {
+					error: new ToolError(
+						`Browser code execution timed out after ${msg.timeoutMs}ms${timedOutSnapshot.stalled ? ` (stalled on ${timedOutSnapshot.stalled})` : ""}${timedOutSnapshot.dialogNote}${pageErrorNote}`,
+					),
+				};
+			} else {
+				failure = { error };
+			}
 		} finally {
 			runAc.abort(postmortem.markExpectedCleanupError(new ToolAbortError("Browser run ended")));
 			await Bun.sleep(0);
@@ -3123,7 +3136,7 @@ export class WorkerCore {
 					output.push({ type: "text", text: formatA11ySummary(result) });
 					return result;
 				}),
-			vitals: opts => op("tab.vitals()", INF, sig => collectVitals(puppeteerReactHost(page), opts, sig)),
+			vitals: opts => op("tab.vitals()", INF, sig => collectVitals(puppeteerIsolatedHost(page), opts, sig)),
 			reactEnable: () => op("tab.reactEnable()", INF, sig => enableReact(puppeteerReactHost(page), sig)),
 			reactTree: opts => op("tab.reactTree()", quickOpMs, sig => readReactTree(page, opts, sig)),
 			reactInspect: id => op(`tab.reactInspect(${id})`, quickOpMs, sig => inspectReactFiber(page, id, sig)),
@@ -3310,7 +3323,7 @@ export class WorkerCore {
 			clearConsole: () =>
 				op("tab.clearConsole()", quickOpMs, async sig => {
 					throwIfAborted(sig);
-					this.#consoleCapture.clear();
+					await untilAborted(sig, () => this.#consoleCapture.clearAsync());
 				}),
 			traceStart: opts =>
 				op("tab.traceStart()", actionOpMs, sig => untilAborted(sig, () => this.#requireTracing().traceStart(opts))),

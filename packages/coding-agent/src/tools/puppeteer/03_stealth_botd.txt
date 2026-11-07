@@ -1,9 +1,25 @@
 
-// Ensure navigator.webdriver behaves like real Chrome
-if (navigator.webdriver !== false && navigator.webdriver !== undefined) {
+// Ensure navigator.webdriver behaves like real Chrome (false, never undefined)
+if (navigator.webdriver !== false) {
 	const proto = Object_getPrototypeOf(navigator);
-	if (proto && "webdriver" in proto) {
-		delete proto.webdriver;
+	if (proto) {
+		const webdriverGetter = Object_getOwnPropertyDescriptor(
+			{
+				get webdriver() {
+					return false;
+				},
+			},
+			"webdriver",
+		)?.get;
+		if (webdriverGetter) {
+			patchToString(webdriverGetter, "get webdriver");
+			Object_defineProperty(proto, "webdriver", {
+				get: webdriverGetter,
+				set: undefined,
+				enumerable: true,
+				configurable: true,
+			});
+		}
 	}
 }
 

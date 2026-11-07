@@ -183,37 +183,39 @@ const patchWorkerConstructor = (name, OriginalWorker) => {
 		}
 	};
 
+	const constructTrap = function construct(target, args, newTarget) {
+		if (!canWrapArguments(args)) {
+			return constructWithCleanStack(target, args || [], newTarget, constructTrap);
+		}
+
+		const wrapped = buildWrappedUrl(args[0]);
+		if (!wrapped) {
+			return constructWithCleanStack(target, args || [], newTarget, constructTrap);
+		}
+
+		const wrappedArgs = [wrapped.url];
+		for (let i = 1; i < args.length; i += 1) {
+			wrappedArgs[i] = args[i];
+		}
+
+		try {
+			const worker = Reflect_construct(target, wrappedArgs, newTarget);
+			if (!sharedWorkerUrls) {
+				scheduleWorkerUrlRevoke(worker, wrapped.url);
+			}
+			return worker;
+		} catch {
+			if (wrapped.cacheKey && sharedWorkerUrls) sharedWorkerUrls.delete(wrapped.cacheKey);
+			revokeUrl(wrapped.url);
+			return constructWithCleanStack(target, args || [], newTarget, constructTrap);
+		}
+	};
+	const applyTrap = function apply(target, thisArg, args) {
+		return invokeWithCleanStack(target, thisArg, args || [], applyTrap);
+	};
 	const handler = {
-		construct(target, args, newTarget) {
-			if (!canWrapArguments(args)) {
-				return Reflect_construct(target, args || [], newTarget);
-			}
-
-			const wrapped = buildWrappedUrl(args[0]);
-			if (!wrapped) {
-				return Reflect_construct(target, args || [], newTarget);
-			}
-
-			const wrappedArgs = [wrapped.url];
-			for (let i = 1; i < args.length; i += 1) {
-				wrappedArgs[i] = args[i];
-			}
-
-			try {
-				const worker = Reflect_construct(target, wrappedArgs, newTarget);
-				if (!sharedWorkerUrls) {
-					scheduleWorkerUrlRevoke(worker, wrapped.url);
-				}
-				return worker;
-			} catch {
-				if (wrapped.cacheKey && sharedWorkerUrls) sharedWorkerUrls.delete(wrapped.cacheKey);
-				revokeUrl(wrapped.url);
-				return Reflect_construct(target, args || [], newTarget);
-			}
-		},
-		apply(target, thisArg, args) {
-			return Reflect_apply(target, thisArg, args || []);
-		},
+		construct: constructTrap,
+		apply: applyTrap,
 	};
 
 	const proxied = new Window_Proxy(OriginalWorker, handler);

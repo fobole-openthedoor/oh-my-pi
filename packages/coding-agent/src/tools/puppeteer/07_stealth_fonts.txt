@@ -76,11 +76,28 @@ if ("queryLocalFonts" in window) {
 
 // Patch the prototype once: wrapping per getContext() call would re-wrap the
 // same cached context on every acquisition and grow the call stack unbounded.
-const originalFillText = CanvasRenderingContext2D.prototype.fillText;
-const patchedFillText = function fillText(text, x, y, maxWidth) {
-  const noiseX = (Math_random() - 0.5) * 0.02;
-  const noiseY = (Math_random() - 0.5) * 0.02;
-  return originalFillText.call(this, text, x + noiseX, y + noiseY, maxWidth);
-};
-patchToString(patchedFillText, "fillText");
-CanvasRenderingContext2D.prototype.fillText = patchedFillText;
+const fillTextDescriptor = Object_getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "fillText");
+if (fillTextDescriptor && typeof fillTextDescriptor.value === "function") {
+  const fillTextApply = function apply(target, thisArg, args) {
+    if (!args || args.length < 3) {
+      return invokeWithCleanStack(target, thisArg, args, fillTextApply);
+    }
+    const noiseX = (Math_random() - 0.5) * 0.02;
+    const noiseY = (Math_random() - 0.5) * 0.02;
+    const nextArgs = [args[0], args[1] + noiseX, args[2] + noiseY];
+    for (let i = 3; i < args.length; i += 1) {
+      nextArgs.push(args[i]);
+    }
+    return invokeWithCleanStack(target, thisArg, nextArgs, fillTextApply);
+  };
+  const patchedFillText = new Window_Proxy(fillTextDescriptor.value, {
+    apply: fillTextApply,
+  });
+  patchToString(patchedFillText, "fillText");
+  Object_defineProperty(CanvasRenderingContext2D.prototype, "fillText", {
+    value: patchedFillText,
+    writable: fillTextDescriptor.writable,
+    configurable: fillTextDescriptor.configurable,
+    enumerable: fillTextDescriptor.enumerable,
+  });
+}

@@ -1836,10 +1836,10 @@ const CANCELLED_RELEASE_GUARD = `(() => {
 
 /** Install {@link CANCELLED_RELEASE_GUARD} in this page's documents, current and future. */
 export async function installCancelledReleaseGuard(page: Page): Promise<void> {
-	await page.evaluateOnNewDocument(CANCELLED_RELEASE_GUARD);
+	await page.evaluateOnNewDocument(`//!world=isolated\n${CANCELLED_RELEASE_GUARD}`);
 	await page
 		.mainFrame()
-		.mainRealm()
+		.isolatedRealm()
 		.evaluate(CANCELLED_RELEASE_GUARD)
 		.catch(() => undefined);
 }

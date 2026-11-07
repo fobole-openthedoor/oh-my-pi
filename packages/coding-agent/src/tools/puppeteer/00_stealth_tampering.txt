@@ -7,6 +7,11 @@ const patchedFns = [
   [window.fetch, "fetch"],
   [window.XMLHttpRequest, "XMLHttpRequest"],
   [window.WebSocket, "WebSocket"],
+  [window.console?.log, "log"],
+  [window.console?.info, "info"],
+  [window.console?.warn, "warn"],
+  [window.console?.error, "error"],
+  [window.console?.debug, "debug"],
   [window.localStorage?.getItem, "getItem"],
   [window.localStorage?.setItem, "setItem"],
   [window.navigator.geolocation?.getCurrentPosition, "getCurrentPosition"],
@@ -21,10 +26,12 @@ for (const [fn, name] of patchedFns) {
 }
 
 // Patch Object.getOwnPropertyDescriptor to return native-looking accessor
-// source through the shared Function.prototype.toString registry.
-const patchedGetOwnPropertyDescriptor = function getOwnPropertyDescriptor(obj, prop) {
-  const descriptor = Reflect_apply(Object_getOwnPropertyDescriptor, this, [obj, prop]);
+// source through the shared Function.prototype.toString registry while keeping
+// error stack traces free of wrapper frames.
+const getOwnPropertyDescriptorApply = function apply(target, thisArg, args) {
+  const descriptor = invokeWithCleanStack(target, thisArg, args, getOwnPropertyDescriptorApply);
   if (!descriptor) return descriptor;
+  const prop = args ? args[1] : undefined;
 
   if (descriptor.get && typeof descriptor.get === "function") {
     patchToString(descriptor.get, "get " + String(prop));
@@ -35,6 +42,9 @@ const patchedGetOwnPropertyDescriptor = function getOwnPropertyDescriptor(obj, p
 
   return descriptor;
 };
+const patchedGetOwnPropertyDescriptor = new Window_Proxy(Object_getOwnPropertyDescriptor, {
+  apply: getOwnPropertyDescriptorApply,
+});
 patchToString(patchedGetOwnPropertyDescriptor, "getOwnPropertyDescriptor");
 Object_defineProperty(Object, "getOwnPropertyDescriptor", {
   value: patchedGetOwnPropertyDescriptor,

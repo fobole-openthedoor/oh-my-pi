@@ -109,18 +109,19 @@ const webglGetContextProfile = (target, thisArg) => {
 	return nativeProfile;
 };
 
+const webglGetParameterApply = function apply(target, thisArg, args) {
+	const nativeValue = invokeWithCleanStack(target, thisArg, args, webglGetParameterApply);
+	const param = args ? args[0] : undefined;
+	if (param === 0x1f00 && typeof nativeValue === "string") return "WebKit";
+	if (param === 0x1f01 && typeof nativeValue === "string") return "WebKit WebGL";
+	if ((param === 0x9245 || param === 0x9246) && typeof nativeValue === "string") {
+		const profile = webglGetContextProfile(target, thisArg);
+		return param === 0x9245 ? profile.vendor : profile.renderer;
+	}
+	return nativeValue;
+};
 const webglGetParameterHandler = {
-	apply(target, thisArg, args) {
-		const nativeValue = Reflect_apply(target, thisArg, args);
-		const param = args[0];
-		if (param === 0x1f00 && typeof nativeValue === "string") return "WebKit";
-		if (param === 0x1f01 && typeof nativeValue === "string") return "WebKit WebGL";
-		if ((param === 0x9245 || param === 0x9246) && typeof nativeValue === "string") {
-			const profile = webglGetContextProfile(target, thisArg);
-			return param === 0x9245 ? profile.vendor : profile.renderer;
-		}
-		return nativeValue;
-	},
+	apply: webglGetParameterApply,
 };
 
 const webglFloatPrecisionTypes = {
@@ -159,44 +160,45 @@ const webglClonePrecisionFormat = (result, values) => {
 	return clone;
 };
 
+const webglGetShaderPrecisionFormatApply = function apply(target, thisArg, args) {
+	const result = invokeWithCleanStack(target, thisArg, args, webglGetShaderPrecisionFormatApply);
+	const precisionType = args ? args[1] : undefined;
+	if (
+		!result ||
+		webglPlatformKind === "android" ||
+		webglPlatformKind === "ios" ||
+		!webglFloatPrecisionTypes[precisionType]
+	) {
+		return result;
+	}
+
+	const rangeMin = result.rangeMin;
+	const rangeMax = result.rangeMax;
+	const precision = result.precision;
+	if (
+		typeof rangeMin !== "number" ||
+		typeof rangeMax !== "number" ||
+		typeof precision !== "number"
+	) {
+		return result;
+	}
+
+	const values = {
+		rangeMin: Math_max(rangeMin, 127),
+		rangeMax: Math_max(rangeMax, 127),
+		precision: Math_max(precision, 23),
+	};
+	if (
+		values.rangeMin === rangeMin &&
+		values.rangeMax === rangeMax &&
+		values.precision === precision
+	) {
+		return result;
+	}
+	return webglClonePrecisionFormat(result, values);
+};
 const webglGetShaderPrecisionFormatHandler = {
-	apply(target, thisArg, args) {
-		const result = Reflect_apply(target, thisArg, args);
-		const precisionType = args[1];
-		if (
-			!result ||
-			webglPlatformKind === "android" ||
-			webglPlatformKind === "ios" ||
-			!webglFloatPrecisionTypes[precisionType]
-		) {
-			return result;
-		}
-
-		const rangeMin = result.rangeMin;
-		const rangeMax = result.rangeMax;
-		const precision = result.precision;
-		if (
-			typeof rangeMin !== "number" ||
-			typeof rangeMax !== "number" ||
-			typeof precision !== "number"
-		) {
-			return result;
-		}
-
-		const values = {
-			rangeMin: Math_max(rangeMin, 127),
-			rangeMax: Math_max(rangeMax, 127),
-			precision: Math_max(precision, 23),
-		};
-		if (
-			values.rangeMin === rangeMin &&
-			values.rangeMax === rangeMax &&
-			values.precision === precision
-		) {
-			return result;
-		}
-		return webglClonePrecisionFormat(result, values);
-	},
+	apply: webglGetShaderPrecisionFormatApply,
 };
 
 const webglInstallMethodProxy = (proto, name, handler) => {

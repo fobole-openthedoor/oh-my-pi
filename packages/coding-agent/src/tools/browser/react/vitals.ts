@@ -117,8 +117,10 @@ export interface VitalsReadEnvelope {
 
 /** Install the buffered Web Vitals observers for this page and future documents. */
 export async function installVitalsObservers(page: Page, signal?: AbortSignal): Promise<void> {
-	await untilAborted(signal, () => page.evaluateOnNewDocument(VITALS_INIT_SOURCE));
-	await untilAborted(signal, () => page.mainFrame().mainRealm().evaluate(VITALS_INIT_SOURCE)).catch(() => undefined);
+	await untilAborted(signal, () => page.evaluateOnNewDocument(`//!world=isolated\n${VITALS_INIT_SOURCE}`));
+	await untilAborted(signal, () => page.mainFrame().isolatedRealm().evaluate(VITALS_INIT_SOURCE)).catch(
+		() => undefined,
+	);
 }
 
 /** Read Web Vitals, reloading once by default when observers missed document start. */

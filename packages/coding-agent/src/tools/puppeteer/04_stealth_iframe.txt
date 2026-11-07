@@ -34,9 +34,11 @@ const iframeSrcdocDescriptor =
 		? undefined
 		: getPropertyDescriptor(HTMLIFrameElement.prototype, "srcdoc");
 
-const getNativeContentWindow = (iframe) => {
+const getNativeContentWindow = (iframe, boundaryFn) => {
 	if (iframeContentWindowDescriptor && iframeContentWindowDescriptor.get) {
-		return Reflect_apply(iframeContentWindowDescriptor.get, iframe, []);
+		return boundaryFn
+			? invokeWithCleanStack(iframeContentWindowDescriptor.get, iframe, [], boundaryFn)
+			: Reflect_apply(iframeContentWindowDescriptor.get, iframe, []);
 	}
 	return undefined;
 };
@@ -118,18 +120,19 @@ if (
 	iframeContentWindowDescriptor.get &&
 	iframeContentWindowDescriptor.configurable !== false
 ) {
+	let contentWindowGetter;
 	const contentWindowAccessors = {
 		get contentWindow() {
 			const state = Reflect_apply(Page_WeakMap_get, iframeWindowProxies, [this]);
-			if (!state) return getNativeContentWindow(this);
+			if (!state) return getNativeContentWindow(this, contentWindowGetter);
 			if (this.isConnected) state.wasConnected = true;
 			if (state.wasConnected && !this.isConnected) return null;
-			const nativeContentWindow = getNativeContentWindow(this);
+			const nativeContentWindow = getNativeContentWindow(this, contentWindowGetter);
 			if (!nativeContentWindow) return nativeContentWindow;
 			return state.setProxyTarget(nativeContentWindow);
 		},
 	};
-	const contentWindowGetter = Object_getOwnPropertyDescriptor(contentWindowAccessors, "contentWindow").get;
+	contentWindowGetter = Object_getOwnPropertyDescriptor(contentWindowAccessors, "contentWindow").get;
 	patchToString(contentWindowGetter, "get contentWindow");
 	Object_defineProperty(HTMLIFrameElement.prototype, "contentWindow", {
 		get: contentWindowGetter,
@@ -144,10 +147,12 @@ if (
 	iframeSrcdocDescriptor &&
 	iframeSrcdocDescriptor.configurable !== false
 ) {
+	let srcdocGetter;
+	let srcdocSetter;
 	const srcdocAccessors = {
 		get srcdoc() {
 			if (iframeSrcdocDescriptor.get) {
-				return Reflect_apply(iframeSrcdocDescriptor.get, this, []);
+				return invokeWithCleanStack(iframeSrcdocDescriptor.get, this, [], srcdocGetter);
 			}
 			const value = this.getAttribute("srcdoc");
 			return value === null ? "" : value;
@@ -155,14 +160,14 @@ if (
 		set srcdoc(newValue) {
 			addContentWindowProxy(this);
 			if (iframeSrcdocDescriptor.set) {
-				return Reflect_apply(iframeSrcdocDescriptor.set, this, [newValue]);
+				return invokeWithCleanStack(iframeSrcdocDescriptor.set, this, [newValue], srcdocSetter);
 			}
 			return this.setAttribute("srcdoc", newValue);
 		},
 	};
 	const srcdocDescriptor = Object_getOwnPropertyDescriptor(srcdocAccessors, "srcdoc");
-	const srcdocGetter = srcdocDescriptor.get;
-	const srcdocSetter = srcdocDescriptor.set;
+	srcdocGetter = srcdocDescriptor.get;
+	srcdocSetter = srcdocDescriptor.set;
 	patchToString(srcdocGetter, "get srcdoc");
 	patchToString(srcdocSetter, "set srcdoc");
 	Object_defineProperty(HTMLIFrameElement.prototype, "srcdoc", {

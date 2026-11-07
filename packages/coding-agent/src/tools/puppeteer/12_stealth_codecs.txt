@@ -14,13 +14,14 @@ const parseInput = (arg) => {
 	return { mime, codecStr, codecs };
 };
 
-const originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
-const proxiedCanPlayType = new Window_Proxy(originalCanPlayType, {
-	apply(target, ctx, args) {
+const canPlayTypeDescriptor = Object_getOwnPropertyDescriptor(HTMLMediaElement.prototype, "canPlayType");
+if (canPlayTypeDescriptor && typeof canPlayTypeDescriptor.value === "function") {
+	const canPlayTypeApply = function apply(target, ctx, args) {
+		const nativeResult = invokeWithCleanStack(target, ctx, args, canPlayTypeApply);
 		if (!args || !args.length) {
-			return Reflect_apply(target, ctx, args);
+			return nativeResult;
 		}
-		const { mime, codecs } = parseInput(args[0]);
+		const { mime, codecs } = parseInput(String(args[0]));
 		if (mime === "video/mp4" && codecs.includes("avc1.42E01E")) {
 			return "probably";
 		}
@@ -30,13 +31,16 @@ const proxiedCanPlayType = new Window_Proxy(originalCanPlayType, {
 		if (mime === "audio/aac" && !codecs.length) {
 			return "probably";
 		}
-		return Reflect_apply(target, ctx, args);
-	},
-});
-patchToString(proxiedCanPlayType, "canPlayType");
-Object_defineProperty(HTMLMediaElement.prototype, "canPlayType", {
-	value: proxiedCanPlayType,
-	writable: true,
-	configurable: true,
-	enumerable: true,
-});
+		return nativeResult;
+	};
+	const proxiedCanPlayType = new Window_Proxy(canPlayTypeDescriptor.value, {
+		apply: canPlayTypeApply,
+	});
+	patchToString(proxiedCanPlayType, "canPlayType");
+	Object_defineProperty(HTMLMediaElement.prototype, "canPlayType", {
+		value: proxiedCanPlayType,
+		writable: canPlayTypeDescriptor.writable,
+		configurable: canPlayTypeDescriptor.configurable,
+		enumerable: canPlayTypeDescriptor.enumerable,
+	});
+}

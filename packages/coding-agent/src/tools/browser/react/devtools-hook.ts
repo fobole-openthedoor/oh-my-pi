@@ -209,6 +209,19 @@ export function puppeteerReactHost(page: Page): ReactPageHost {
 	};
 }
 
+/** `ReactPageHost` over a Puppeteer page's isolated utility world so main-world globals stay clean. */
+export function puppeteerIsolatedHost(page: Page): ReactPageHost {
+	return {
+		evaluate: (source, signal) => untilAborted(signal, () => page.mainFrame().isolatedRealm().evaluate(source)),
+		async addInitSource(source, signal) {
+			await untilAborted(signal, () => page.evaluateOnNewDocument(`//!world=isolated\n${source}`));
+		},
+		async reload(signal) {
+			await untilAborted(signal, () => page.reload({ waitUntil: "load" }));
+		},
+	};
+}
+
 /** Enable the minimal React DevTools hook before reloading the current page. */
 export async function enableReact(host: ReactPageHost, signal?: AbortSignal): Promise<ReactEnableResult> {
 	await host.addInitSource(REACT_HOOK_INIT_SOURCE, signal);

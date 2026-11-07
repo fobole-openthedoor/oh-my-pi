@@ -967,6 +967,8 @@ export interface UserAgentOverride {
 		bitness: string;
 		model: string;
 		mobile: boolean;
+		wow64?: boolean;
+		formFactors?: string[];
 	};
 }
 
@@ -988,6 +990,27 @@ async function resolveMacOsProductVersion(): Promise<string> {
 	}
 }
 
+function normalizeThreePartVersion(raw: string, fallback: string): string {
+	const match = raw.trim().match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+	if (!match?.[1]) return fallback;
+	return `${match[1]}.${match[2] ?? "0"}.${match[3] ?? "0"}`;
+}
+
+function resolveWindowsPlatformVersion(): string {
+	if (os.platform() === "win32") {
+		const parts = os.release().split(".");
+		const build = Number.parseInt(parts[2] ?? "0", 10) || 0;
+		if (build >= 22000) return "15.0.0";
+	}
+	return "10.0.0";
+}
+
+function resolveLinuxNavigatorPlatform(): string {
+	if (os.arch() === "arm64") return "Linux aarch64";
+	if (os.arch() === "x64") return "Linux x86_64";
+	return "Linux i686";
+}
+
 function resolveHostArchitecture(): string {
 	if (os.arch() === "arm64") return "arm";
 	if (os.arch().includes("64")) return "x86";
@@ -1000,10 +1023,7 @@ function resolveHostBitness(): string {
 
 async function resolveUserAgentOverride(page: Page): Promise<UserAgentOverride> {
 	const rawUserAgent = await page.browser().userAgent();
-	let userAgent = rawUserAgent.replace("HeadlessChrome/", "Chrome/");
-	if (userAgent.includes("Linux") && !userAgent.includes("Android")) {
-		userAgent = userAgent.replace(/\(([^)]+)\)/, "(Windows NT 10.0; Win64; x64)");
-	}
+	const userAgent = rawUserAgent.replace("HeadlessChrome/", "Chrome/");
 
 	const uaVersionMatch = userAgent.match(/Chrome\/([\d|.]+)/);
 	const browserVersionMatch = (await page.browser().version()).match(/\/([\d|.]+)/);
@@ -1013,15 +1033,24 @@ async function resolveUserAgentOverride(page: Page): Promise<UserAgentOverride> 
 	const isAndroid = userAgent.includes("Android");
 	const isMac = userAgent.includes("Mac OS X");
 	const isWindows = userAgent.includes("Windows");
-	const platform = isMac ? "MacIntel" : isAndroid ? "Android" : userAgent.includes("Linux") ? "Linux" : "Win32";
-	const platformFull = isMac ? "macOS" : isAndroid ? "Android" : userAgent.includes("Linux") ? "Linux" : "Windows";
+	const isLinux = !isAndroid && userAgent.includes("Linux");
+	const platform = isMac
+		? "MacIntel"
+		: isAndroid
+			? os.arch() === "arm64"
+				? "Linux aarch64"
+				: "Linux armv8l"
+			: isLinux
+				? resolveLinuxNavigatorPlatform()
+				: "Win32";
+	const platformFull = isMac ? "macOS" : isAndroid ? "Android" : isLinux ? "Linux" : "Windows";
 	const platformVersion = isMac
-		? await resolveMacOsProductVersion()
-		: userAgent.includes("Android ")
-			? (userAgent.match(/Android ([^;]+)/)?.[1] ?? "")
+		? normalizeThreePartVersion(await resolveMacOsProductVersion(), "14.5.0")
+		: isAndroid
+			? normalizeThreePartVersion(userAgent.match(/Android ([^;)]+)/)?.[1] ?? "", "14.0.0")
 			: isWindows
-				? (userAgent.match(/Windows NT ([\d.]+)/)?.[1] ?? "")
-				: "";
+				? resolveWindowsPlatformVersion()
+				: normalizeThreePartVersion(os.platform() === "linux" ? os.release() : "", "6.8.0");
 	const architecture = isAndroid ? "" : resolveHostArchitecture();
 	const bitness = isAndroid ? "" : resolveHostBitness();
 	const model = isAndroid ? (userAgent.match(/Android.*?;\s([^)]+)/)?.[1] ?? "") : "";
@@ -1060,6 +1089,8 @@ async function resolveUserAgentOverride(page: Page): Promise<UserAgentOverride> 
 			bitness,
 			model,
 			mobile: isAndroid,
+			wow64: false,
+			formFactors: isAndroid ? ["Mobile"] : ["Desktop"],
 		},
 	};
 }
@@ -1095,23 +1126,21 @@ export interface UserAgentSession {
 	browserSession: CDPSession | null;
 }
 
-/** Configure UA override on the browser + auto-attach to new targets. */
+/** Configure UA override on the browser via flattened auto-attach without detaching sessions. */
 async function configureUserAgentTargets(
 	browser: Browser,
 	state: { browserSession: CDPSession | null; override: UserAgentOverride },
 	targetTimeoutMs = USER_AGENT_TARGET_TIMEOUT_MS,
+	skipTarget?: Target,
 ): Promise<void> {
+	const skipTargetId = (skipTarget as (Target & { _targetId?: string }) | undefined)?._targetId;
 	if (!state.browserSession) {
 		state.browserSession = await browser.target().createCDPSession();
-		await state.browserSession.send("Target.setAutoAttach", {
-			autoAttach: true,
-			waitForDebuggerOnStart: false,
-			flatten: true,
-		});
 		state.browserSession.on(
 			"Target.attachedToTarget",
-			async (event: { sessionId: string; targetInfo?: { type?: string } }) => {
+			async (event: { sessionId: string; targetInfo?: { targetId?: string; type?: string } }) => {
 				if (!targetInfoSupportsUserAgentOverride(event.targetInfo)) return;
+				if (skipTargetId && event.targetInfo?.targetId === skipTargetId) return;
 				const connection = state.browserSession?.connection();
 				const session = connection?.session(event.sessionId);
 				if (!session) return;
@@ -1122,18 +1151,12 @@ async function configureUserAgentTargets(
 				);
 			},
 		);
+		await state.browserSession.send("Target.setAutoAttach", {
+			autoAttach: true,
+			waitForDebuggerOnStart: false,
+			flatten: true,
+		});
 	}
-
-	const targets = browser.targets().filter(targetSupportsUserAgentOverride);
-	await Promise.all(
-		targets.map(async target => {
-			await withSoftTimeout(
-				applyTargetUserAgentOverride(target, state.override),
-				targetTimeoutMs,
-				"target user-agent override",
-			);
-		}),
-	);
 }
 
 function targetSupportsUserAgentOverride(target: Target): boolean {
@@ -1144,23 +1167,12 @@ function targetInfoSupportsUserAgentOverride(targetInfo: { type?: string } | und
 	return Boolean(targetInfo?.type && USER_AGENT_TARGET_TYPES.has(targetInfo.type));
 }
 
-async function applyTargetUserAgentOverride(target: Target, override: UserAgentOverride): Promise<void> {
-	const session = await target.createCDPSession();
-	try {
-		await sendUserAgentOverride(wrapSession(session), override);
-	} finally {
-		await session.detach().catch(() => undefined);
-	}
-}
-
 async function withSoftTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T | undefined> {
-	let timeout: NodeJS.Timeout | undefined;
-	const timeoutPromise = new Promise<undefined>(resolve => {
-		timeout = setTimeout(() => {
-			logger.debug(`Timed out applying ${label}`);
-			resolve(undefined);
-		}, timeoutMs);
-	});
+	const { promise: timeoutPromise, resolve } = Promise.withResolvers<undefined>();
+	const timeout = setTimeout(() => {
+		logger.debug(`Timed out applying ${label}`);
+		resolve(undefined);
+	}, timeoutMs);
 	try {
 		return await Promise.race([
 			promise.catch(error => {
@@ -1170,7 +1182,7 @@ async function withSoftTimeout<T>(promise: Promise<T>, timeoutMs: number, label:
 			timeoutPromise,
 		]);
 	} finally {
-		if (timeout) clearTimeout(timeout);
+		clearTimeout(timeout);
 	}
 }
 
@@ -1264,6 +1276,35 @@ function buildStealthInjectionScript(scripts: readonly string[] = STEALTH_PATCH_
 					const Reflect_setPrototypeOf = nativeWindow.Reflect.setPrototypeOf;
 					const Intl_DateTimeFormat = nativeWindow.Intl.DateTimeFormat;
 					const Date_constructor = nativeWindow.Date;
+					const Error_captureStackTrace = nativeWindow.Error.captureStackTrace;
+
+					const stripStackUpTo = (err, boundaryFn) => {
+						if (
+							err &&
+							(typeof err === "object" || typeof err === "function") &&
+							typeof Error_captureStackTrace === "function"
+						) {
+							try {
+								Error_captureStackTrace(err, boundaryFn);
+							} catch {}
+						}
+					};
+					const invokeWithCleanStack = (target, thisArg, args, boundaryFn) => {
+						try {
+							return Reflect_apply(target, thisArg, args || []);
+						} catch (err) {
+							stripStackUpTo(err, boundaryFn);
+							throw err;
+						}
+					};
+					const constructWithCleanStack = (target, args, newTarget, boundaryFn) => {
+						try {
+							return Reflect_construct(target, args || [], newTarget);
+						} catch (err) {
+							stripStackUpTo(err, boundaryFn);
+							throw err;
+						}
+					};
 
 					const nativeFunctionSources = new Page_WeakMap();
 					const makeNativeString = (name) => "function " + (name || "") + "() { [native code] }";
@@ -1273,12 +1314,13 @@ function buildStealthInjectionScript(scripts: readonly string[] = STEALTH_PATCH_
 					};
 					const patchToString = (fn, name) => registerNativeSource(fn, makeNativeString(name));
 					if (${scripts.length > 0 ? "true" : "false"}) {
+						const functionToStringApply = function apply(target, thisArg, args) {
+							const source = Reflect_apply(Page_WeakMap_get, nativeFunctionSources, [thisArg]);
+							if (source) return source;
+							return invokeWithCleanStack(target, thisArg, args, functionToStringApply);
+						};
 						const functionToStringProxy = new Page_Proxy(Page_Function_toString, {
-							apply(target, thisArg, args) {
-								const source = Reflect_apply(Page_WeakMap_get, nativeFunctionSources, [thisArg]);
-								if (source) return source;
-								return Reflect_apply(target, thisArg, args || []);
-							},
+							apply: functionToStringApply,
 							get(target, key, receiver) {
 								return Reflect_get(target, key, receiver);
 							},
@@ -1318,14 +1360,21 @@ export async function applyStealthPatches(
 	if (!state.override) {
 		state.override = await resolveUserAgentOverride(page);
 	}
-	// UA/language overrides are session-scoped; detached target sessions do not
-	// replace the primary client override, and setUserAgent has no language option.
+	await page
+		.setUserAgent({
+			userAgent: state.override.userAgent,
+			userAgentMetadata: state.override.userAgentMetadata,
+			platform: state.override.platform,
+		})
+		.catch(() => undefined);
+	// UA/language overrides are session-scoped; keep primary client acceptLanguage in sync
+	// and never open+detach a throwaway session onto this target.
 	const client = resolvePageClient(page);
 	if (client) {
 		await sendUserAgentOverride(client, state.override);
 	}
 	const targetState = { browserSession: state.browserSession, override: state.override };
-	await configureUserAgentTargets(browser, targetState);
+	await configureUserAgentTargets(browser, targetState, USER_AGENT_TARGET_TIMEOUT_MS, page.target());
 	state.browserSession = targetState.browserSession;
 	await injectStealthScripts(page);
 }
