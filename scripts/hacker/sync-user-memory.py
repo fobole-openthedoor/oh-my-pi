@@ -18,7 +18,9 @@ Do not infer a domain from a filename, URL, or generic words such as “program�
 
 The `domain-route` extension gives advisory hints only by default and does not block tools (`DOMAIN_ROUTE=0` disables hints; `DOMAIN_ROUTE_GATE=1` opts into blocking).
 
-For explicit authorized web pentests, `parallel-pentest` asks whether to stay single-threaded or use 2/3/4 lanes. The choice is session-local and never grants authorization. `/parallel-pentest` opens the selector manually; `PARALLEL_PENTEST=0` disables the prompt.
+Subagent delegation (`task.eager = always`, `task.maxConcurrency = 4`): across multi-slice coding, reverse/audit, or authorized assessment work, once 1–3 brief scoping steps confirm ≥2 genuinely independent slices, proactively launch a **2-subagent baseline** in a single `task` batch (`{{ context, tasks[] }}`) instead of working sequentially inline. Self-evaluate scaling to **3–4 subagents** only when evidence shows 3–4 disjoint, substantial slices within budget; stay single-threaded for single-slice tasks, small edits, or direct questions.
+
+For explicit authorized web pentests, `parallel-pentest` defaults to `auto` (proactive 2-lane baseline, model-evaluated 3–4 lanes) without blocking on a popup; it never grants target authorization. `/parallel-pentest` or `PARALLEL_PENTEST=select` opens the manual selector; `PARALLEL_PENTEST=2|3|4` caps lanes; `PARALLEL_PENTEST=0` disables it.
 
 | Domain | Explicit task | Skill |
 | --- | --- | --- |

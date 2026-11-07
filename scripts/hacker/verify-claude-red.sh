@@ -138,16 +138,22 @@ else
   bad "config.yml modelProviderOrder missing beefsms"
 fi
 
+if [ -f "$AGENT_DIR/config.yml" ] && grep -Eq '^[[:space:]]*eager:[[:space:]]*always([[:space:]]|$)' "$AGENT_DIR/config.yml" && grep -Eq '^[[:space:]]*maxConcurrency:[[:space:]]*4([[:space:]]|$)' "$AGENT_DIR/config.yml"; then
+  ok "task.eager=always and task.maxConcurrency=4"
+else
+  bad "config.yml missing task.eager=always or task.maxConcurrency=4"
+fi
+
 if [ -f "$AGENT_DIR/extensions/domain-route.ts" ]; then
   ok "domain-route.ts present"
 else
   bad "domain-route.ts missing"
 fi
 
-if [ -f "$AGENT_DIR/extensions/parallel-pentest.ts" ] && [ -f "$AGENT_DIR/extensions/prompts/parallel-pentest.md" ]; then
-  ok "parallel-pentest extension and prompt present"
+if [ -f "$AGENT_DIR/extensions/parallel-pentest.ts" ] && [ -f "$AGENT_DIR/extensions/prompts/parallel-pentest.md" ] && [ -f "$AGENT_DIR/extensions/prompts/parallel-pentest-nudge.md" ]; then
+  ok "parallel-pentest extension and prompts present"
 else
-  bad "parallel-pentest extension or prompt missing"
+  bad "parallel-pentest extension or prompts missing"
 fi
 
 if [ -f "$AGENT_DIR/extensions/ghidra-open.ts" ]; then

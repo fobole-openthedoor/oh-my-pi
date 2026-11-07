@@ -67,7 +67,24 @@ mkdir -p "$AGENT_DIR/skills" "$AGENT_DIR/extensions" "$(dirname "$ENV_FILE")"
 ensure_env APK_REVERSE_ROOT "$APK_REVERSE_ROOT"
 ensure_env DOMAIN_ROUTE "${DOMAIN_ROUTE:-1}"
 ensure_env DOMAIN_ROUTE_GATE "${DOMAIN_ROUTE_GATE:-0}"
-ensure_env PARALLEL_PENTEST "${PARALLEL_PENTEST:-ask}"
+if [ -f "$ENV_FILE" ] && grep -Eq '^export PARALLEL_PENTEST="(\$\{PARALLEL_PENTEST:-ask\}|ask)"$' "$ENV_FILE" 2>/dev/null; then
+  python3 - "$ENV_FILE" <<'PY'
+import os, re, sys
+path = sys.argv[1]
+mode = os.stat(path).st_mode & 0o777
+text = open(path, encoding="utf-8").read()
+text = re.sub(
+    r'^export PARALLEL_PENTEST="(?:\$\{PARALLEL_PENTEST:-ask\}|ask)"$',
+    'export PARALLEL_PENTEST="${PARALLEL_PENTEST:-auto}"',
+    text,
+    flags=re.M,
+)
+with open(path, "w", encoding="utf-8") as f:
+    f.write(text)
+os.chmod(path, mode)
+PY
+fi
+ensure_env PARALLEL_PENTEST "${PARALLEL_PENTEST:-auto}"
 ensure_env DROP_DEGENERATE_THINKING "${DROP_DEGENERATE_THINKING:-1}"
 
 seed_if_missing "$KIT/models.yml.example" "$AGENT_DIR/models.yml"

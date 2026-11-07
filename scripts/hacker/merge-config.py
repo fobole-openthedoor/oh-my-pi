@@ -39,6 +39,7 @@ KIT_OWNED = {
     "modelProviderOrder": ["beefsms"],
     "task": {
         "maxConcurrency": 4,
+        "eager": "always",
     },
 }
 
@@ -246,6 +247,9 @@ def self_test() -> int:
             return 1
         if (data.get("task") or {}).get("maxConcurrency") != 4:
             print("FAIL task.maxConcurrency not 4", file=sys.stderr)
+            return 1
+        if (data.get("task") or {}).get("eager") != "always":
+            print("FAIL task.eager not always", file=sys.stderr)
             return 1
         compaction = data.get("compaction") or {}
         if compaction.get("enabled") is not True:

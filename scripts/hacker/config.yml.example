@@ -10,6 +10,7 @@ modelProviderOrder:
 defaultThinkingLevel: max
 task:
   maxConcurrency: 4
+  eager: always
 tools:
   approvalMode: yolo
 compaction:

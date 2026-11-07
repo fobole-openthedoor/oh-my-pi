@@ -51,7 +51,7 @@ If `/usr/local/bin` is not writable, the launcher lands in `~/.local/bin`. Put t
 | `/usr/local/bin/omp` (or `~/.local/bin/omp`) | `launch.sh` — sources the env file so other `OPENAI_BASE_URL` values in `~/.bashrc` do not leak in |
 | `~/.config/omp/env` | provider, models, timeouts, keys |
 | `~/.omp/agent/models.yml` | beefsms custom provider (apiKey = env var name) |
-| `~/.omp/agent/config.yml` | roles (default = `beefsms/happy/Deepseek-v4.1-Flash-1017`, smol/compact = `beefsms/deepseek-flash`, vision = `beefsms/deepseek-flash:low`, no `slow` preset), yolo, shake-then-soft compact at 50%, thinking max |
+| `~/.omp/agent/config.yml` | roles (default = `beefsms/happy/Deepseek-v4.1-Flash-1017`, smol/compact = `beefsms/deepseek-flash`, vision = `beefsms/deepseek-flash:low`, no `slow` preset), `task.eager: always`, `task.maxConcurrency: 4`, yolo, shake-then-soft compact at 50%, thinking max |
 | `~/.omp/agent/AGENTS.md` | Work mode: 逆向 / 破解 / 渗透 |
 | `~/.omp/agent/mcp.json` | ghidra stdio MCP |
 | `~/.omp/agent/extensions/` | Kimi thinking, beefsms `/login`, domain-route, parallel-pentest, ghidra-open |
@@ -77,7 +77,7 @@ Domain routing only hints on explicit matches; filenames, URLs, and generic word
 
 Explicit CVE IDs, N-day research, EPSS/KEV/OSV, and vulnerability triage load `cve-intel` without loading an offensive pack. Its standard-library helper aggregates NVD, FIRST EPSS, CISA KEV, OSV, and GitHub Advisory with six-hour caching and partial-failure reporting. Exact package checks use `--package ecosystem:name@version`. The skill keeps applicability, reachability, and impact separate and provides an isolated positive/negative-control reproduction workflow. No large third-party MCP server is installed.
 
-For explicit authorized web pentests, `parallel-pentest.ts` asks once per session whether to stay single-threaded or use 2/3/4 lanes. Selection never grants authorization and does not spawn agents by itself; the parent receives batching, scope, deduplication, mutation-safety, and PoC-validation guidance. `/parallel-pentest` opens the selector manually, and `PARALLEL_PENTEST=0` disables the prompt. `task.maxConcurrency` is capped at 4 by the kit.
+For explicit authorized web pentests, `parallel-pentest.ts` defaults to `auto`: a proactive 2-lane subagent baseline after 1–3 bounded read-only recon steps, with 3–4 lanes self-evaluated by the model when genuinely disjoint surfaces exist (`task.eager: always`, `task.maxConcurrency: 4`). Policy activation never grants target authorization; the parent receives batching, scope, deduplication, mutation-safety, and PoC-validation guidance, plus a drift reminder if inline recon runs past budget without calling `task`. `/parallel-pentest` or `PARALLEL_PENTEST=select` opens the manual selector, `PARALLEL_PENTEST=2|3|4` sets a fixed lane cap, and `PARALLEL_PENTEST=0` disables it.
 
 The `sync-kit.sh` re-mcp-ghidra patch bounds `decompile_function` to 200 lines by default and stores complete pseudocode in a local `evidence_path`; read that file for other pages instead of decompiling again. Use `detail=complete` when full inline output is required.
 
